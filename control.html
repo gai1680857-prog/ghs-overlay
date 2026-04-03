@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GHS 直播控制台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--g:#FFD700;--g2:#FFA500;--r:#FF4757;--t:#00D4AA;--p:#8B5CF6;--bg:#08080A;--card:rgba(255,255,255,0.04);--border:rgba(255,215,0,0.15)}
+body{background:var(--bg);color:#fff;font-family:'Noto Sans TC','Segoe UI',sans-serif;min-height:100vh;padding:16px}
+h1{font-size:20px;font-weight:900;color:var(--g);letter-spacing:2px;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+h1 span{font-size:11px;color:rgba(255,255,255,0.3);font-weight:400;letter-spacing:1px}
+.status{font-size:11px;padding:2px 10px;border-radius:20px;background:rgba(0,212,170,0.15);color:var(--t);border:1px solid rgba(0,212,170,0.3)}
+.status.err{background:rgba(255,71,87,0.15);color:var(--r);border-color:rgba(255,71,87,0.3)}
+
+/* Setup modal */
+#setup{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:999}
+#setup.hide{display:none}
+.setup-box{background:#111;border:1px solid var(--border);border-radius:16px;padding:32px;width:min(440px,90vw)}
+.setup-box h2{color:var(--g);margin-bottom:20px;font-size:18px}
+.setup-box p{color:rgba(255,255,255,0.5);font-size:13px;margin-bottom:20px;line-height:1.6}
+
+/* Grid layout */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+.card-title{font-size:11px;color:rgba(255,215,0,0.5);letter-spacing:2px;font-weight:700;margin-bottom:12px;text-transform:uppercase}
+
+/* Inputs */
+input,select{width:100%;padding:8px 12px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#fff;font-size:14px;outline:none;transition:.2s}
+input:focus,select:focus{border-color:var(--g)}
+select option{background:#111}
+.row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.row label{font-size:13px;color:rgba(255,255,255,0.6);width:80px;flex-shrink:0}
+.row input,.row select{flex:1}
+
+/* Buttons */
+button{padding:8px 16px;border-radius:8px;border:1px solid rgba(255,215,0,0.3);background:rgba(255,215,0,0.1);color:var(--g);font-size:13px;cursor:pointer;transition:.15s;white-space:nowrap}
+button:hover{background:rgba(255,215,0,0.25);border-color:var(--g)}
+button:active{transform:scale(0.97)}
+button.on{background:rgba(0,212,170,0.2);border-color:var(--t);color:var(--t)}
+button.off{background:rgba(255,71,87,0.15);border-color:rgba(255,71,87,0.3);color:var(--r)}
+button.red{background:rgba(255,71,87,0.2);border-color:rgba(255,71,87,0.5);color:var(--r)}
+button.red:hover{background:rgba(255,71,87,0.4)}
+button.full{width:100%;padding:10px}
+button.sm{padding:6px 12px;font-size:12px}
+
+/* Energy slider */
+.slider{width:100%;margin:8px 0;accent-color:var(--g)}
+.energy-display{font-family:monospace;font-size:28px;font-weight:900;color:var(--g);text-align:center;margin:8px 0}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+.btn-row button{flex:1;min-width:0}
+
+/* Alert builder */
+.alert-row{display:grid;grid-template-columns:1fr 1fr 80px;gap:8px;margin-bottom:8px}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;right:24px;padding:10px 20px;background:var(--t);color:#000;border-radius:8px;font-size:13px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999}
+#toast.show{opacity:1}
+#toast.err{background:var(--r);color:#fff}
+
+/* Mobile */
+@media(max-width:600px){
+  body{padding:10px}
+  .grid{grid-template-columns:1fr}
+  .alert-row{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <div class="setup-box">
+    <h2>GHS 直播控制台設定</h2>
+    <p>第一次使用需要設定 Worker 網址與管理密鑰，之後會記住。</p>
+    <div class="row" style="margin-bottom:12px">
+      <label>Worker URL</label>
+      <input id="sUrl" value="https://ghs-stream-api.gai1680857.workers.dev" placeholder="Worker 網址">
+    </div>
+    <div class="row" style="margin-bottom:20px">
+      <label>Admin Key</label>
+      <input id="sKey" type="password" placeholder="你的 ADMIN_KEY">
+    </div>
+    <button class="full" onclick="saveSetup()">儲存並進入</button>
+  </div>
+</div>
+
+<h1>GHS 直播控制台 <span id="connStatus" class="status">連線中...</span></h1>
+
+<div class="grid">
+
+  <!-- API 串接 -->
+  <div class="card">
+    <div class="card-title">Live API 串接</div>
+    <div class="row"><label>FB Video ID</label><input id="fbVideoId" placeholder="開播後貼入 Video ID"></div>
+    <div class="row"><label>Twitch</label><input id="twChannel" placeholder="頻道名稱（小寫）"></div>
+    <div class="btn-row" style="margin-top:4px">
+      <button id="apiBtn" class="full" onclick="toggleApi()">啟動 API</button>
+    </div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.25);margin-top:8px">啟動後 overlay 自動切換真實資料</div>
+  </div>
+
+  <!-- 能量條 -->
+  <div class="card">
+    <div class="card-title">能量條</div>
+    <div class="energy-display" id="energyDisplay">0%</div>
+    <input type="range" class="slider" id="energySlider" min="0" max="100" value="0" oninput="onEnergySlider(this.value)">
+    <div class="btn-row">
+      <button class="sm" onclick="adjustEnergy(-10)">-10</button>
+      <button class="sm" onclick="adjustEnergy(10)">+10</button>
+      <button class="sm" onclick="setEnergy(50)">50%</button>
+      <button class="sm" onclick="setEnergy(100)">MAX</button>
+      <button class="sm" onclick="setEnergy(0)">清零</button>
+    </div>
+  </div>
+
+  <!-- 遊戲名稱 -->
+  <div class="card">
+    <div class="card-title">遊戲名稱</div>
+    <div class="row"><label>名稱</label><input id="gameName" placeholder="Fortune Tiger" value="Fortune Tiger"></div>
+    <button class="full" style="margin-top:4px" onclick="setGameName()">套用</button>
+  </div>
+
+  <!-- 倒計時 -->
+  <div class="card">
+    <div class="card-title">倒計時</div>
+    <div class="row"><label>分鐘</label><input id="cdMin" type="number" value="30" min="1" max="999"></div>
+    <div class="row"><label>事件名</label><input id="cdLabel" value="紅包雨倒計時"></div>
+    <div class="btn-row" style="margin-top:4px">
+      <button id="cdBtn" class="off" onclick="toggleCountdown()">倒計時 OFF</button>
+    </div>
+  </div>
+
+  <!-- 特效 -->
+  <div class="card">
+    <div class="card-title">特效觸發</div>
+    <div class="btn-row">
+      <button class="red full" onclick="fireCommand({type:'redEnvelope'})">紅包雨</button>
+      <button class="red full" onclick="fireCommand({type:'redEnvelope'});setTimeout(()=>fireCommand({type:'redEnvelope'}),800)">紅包雨 x2</button>
+    </div>
+  </div>
+
+  <!-- 手動 Alert -->
+  <div class="card">
+    <div class="card-title">手動 Alert</div>
+    <div class="alert-row">
+      <select id="aType">
+        <option value="follow">追蹤</option>
+        <option value="sub">訂閱</option>
+        <option value="tip">打賞</option>
+        <option value="share">分享</option>
+      </select>
+      <input id="aUser" placeholder="用戶名">
+      <input id="aAmt" placeholder="金額">
+    </div>
+    <button class="full" onclick="sendAlert()">發送 Alert</button>
+  </div>
+
+  <!-- 顯示開關 -->
+  <div class="card">
+    <div class="card-title">顯示開關</div>
+    <div class="btn-row">
+      <button id="qrBtn" class="on" onclick="toggle('qrOn','qrBtn','QR Code')">QR Code ON</button>
+      <button id="winsBtn" class="on" onclick="toggle('winsOn','winsBtn','跑馬燈')">跑馬燈 ON</button>
+    </div>
+  </div>
+
+  <!-- 設定 -->
+  <div class="card">
+    <div class="card-title">連線設定</div>
+    <div class="row"><label>Worker</label><input id="cfgUrl" readonly style="font-size:11px;color:rgba(255,255,255,0.4)"></div>
+    <div class="row"><label>Admin Key</label><input id="cfgKey" type="password" readonly style="font-size:11px;color:rgba(255,255,255,0.4)"></div>
+    <button class="full sm" style="margin-top:8px" onclick="resetSetup()">重新設定</button>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+const WORKER = () => localStorage.getItem('ghs_worker') || '';
+const AKEY = () => localStorage.getItem('ghs_key') || '';
+
+let state = {};
+let apiActive = false;
+
+// ─── Setup ───────────────────────────────────────────────
+function saveSetup() {
+  const url = document.getElementById('sUrl').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('sKey').value.trim();
+  if (!url || !key) return toast('請填入 Worker URL 和 Admin Key', true);
+  localStorage.setItem('ghs_worker', url);
+  localStorage.setItem('ghs_key', key);
+  document.getElementById('setup').classList.add('hide');
+  init();
+}
+
+function resetSetup() {
+  localStorage.removeItem('ghs_worker');
+  localStorage.removeItem('ghs_key');
+  location.reload();
+}
+
+// ─── API helpers ─────────────────────────────────────────
+async function api(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': AKEY() }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(WORKER() + path, opts);
+  return res.json();
+}
+
+async function setState(updates) {
+  try {
+    const r = await api('/api/state', 'POST', updates);
+    if (r.ok) { Object.assign(state, updates); updateUI(); toast('已更新'); }
+    else toast(r.error || '失敗', true);
+  } catch (e) { toast('連線失敗', true); }
+}
+
+async function fireCommand(cmd) {
+  try {
+    await api('/api/command', 'POST', cmd);
+    toast('指令已發送');
+  } catch { toast('發送失敗', true); }
+}
+
+// ─── State sync ──────────────────────────────────────────
+async function fetchState() {
+  try {
+    const r = await fetch(WORKER() + '/api/state');
+    state = await r.json();
+    updateUI();
+    document.getElementById('connStatus').textContent = '已連線';
+    document.getElementById('connStatus').className = 'status';
+  } catch {
+    document.getElementById('connStatus').textContent = '連線失敗';
+    document.getElementById('connStatus').className = 'status err';
+  }
+}
+
+function updateUI() {
+  // Energy
+  const e = state.energy || 0;
+  document.getElementById('energyDisplay').textContent = e + '%';
+  document.getElementById('energySlider').value = e;
+
+  // Game
+  if (state.gameName) document.getElementById('gameName').value = state.gameName;
+
+  // Countdown
+  const cdBtn = document.getElementById('cdBtn');
+  if (state.countdownOn) {
+    cdBtn.textContent = '倒計時 ON';
+    cdBtn.className = 'on';
+  } else {
+    cdBtn.textContent = '倒計時 OFF';
+    cdBtn.className = 'off';
+  }
+
+  // API
+  apiActive = state.apiActive || false;
+  const apiBtn = document.getElementById('apiBtn');
+  if (apiActive) {
+    apiBtn.textContent = '停止 API';
+    apiBtn.className = 'full red';
+  } else {
+    apiBtn.textContent = '啟動 API';
+    apiBtn.className = 'full';
+  }
+  if (state.fbVideoId) document.getElementById('fbVideoId').value = state.fbVideoId;
+  if (state.twChannel) document.getElementById('twChannel').value = state.twChannel;
+
+  // Toggles
+  setToggleBtn('qrBtn', state.qrOn !== false, 'QR Code');
+  setToggleBtn('winsBtn', state.winsOn !== false, '跑馬燈');
+}
+
+function setToggleBtn(id, on, label) {
+  const btn = document.getElementById(id);
+  btn.textContent = label + (on ? ' ON' : ' OFF');
+  btn.className = on ? 'on' : 'off';
+}
+
+// ─── Controls ─────────────────────────────────────────────
+let energyLocal = 0;
+function onEnergySlider(v) {
+  energyLocal = parseInt(v);
+  document.getElementById('energyDisplay').textContent = energyLocal + '%';
+}
+function setEnergy(v) {
+  energyLocal = Math.max(0, Math.min(100, v));
+  setState({ energy: energyLocal });
+}
+function adjustEnergy(delta) {
+  setEnergy((state.energy || 0) + delta);
+}
+
+function setGameName() {
+  const name = document.getElementById('gameName').value.trim();
+  if (name) setState({ gameName: name });
+}
+
+function toggleCountdown() {
+  if (state.countdownOn) {
+    setState({ countdownOn: false });
+  } else {
+    const sec = (parseInt(document.getElementById('cdMin').value) || 30) * 60;
+    const label = document.getElementById('cdLabel').value || '倒計時';
+    setState({ countdownOn: true, countdownSec: sec, countdownLabel: label });
+  }
+}
+
+function toggleApi() {
+  const fbVideoId = document.getElementById('fbVideoId').value.trim();
+  const twChannel = document.getElementById('twChannel').value.trim();
+  if (!apiActive && !fbVideoId && !twChannel) {
+    toast('請先填入 FB Video ID 或 Twitch 頻道', true);
+    return;
+  }
+  setState({ apiActive: !apiActive, fbVideoId, twChannel });
+}
+
+function toggle(key, btnId, label) {
+  const next = !(state[key] !== false);
+  setState({ [key]: next });
+}
+
+function sendAlert() {
+  const type = document.getElementById('aType').value;
+  const user = document.getElementById('aUser').value.trim() || 'Player';
+  const amount = document.getElementById('aAmt').value.trim();
+  const msgs = { follow: '追蹤了!', sub: '訂閱了!', tip: '打賞了!', share: '分享了直播!' };
+  fireCommand({ type: 'alert', alertType: type, user, msg: msgs[type], amount });
+  document.getElementById('aUser').value = '';
+  document.getElementById('aAmt').value = '';
+}
+
+// ─── Toast ───────────────────────────────────────────────
+let toastTimer;
+function toast(msg, err = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (err ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 2000);
+}
+
+// ─── Init ────────────────────────────────────────────────
+function init() {
+  const url = WORKER();
+  const key = AKEY();
+  if (!url || !key) {
+    document.getElementById('setup').classList.remove('hide');
+    return;
+  }
+  document.getElementById('setup').classList.add('hide');
+  document.getElementById('cfgUrl').value = url;
+  document.getElementById('cfgKey').value = key;
+  fetchState();
+  setInterval(fetchState, 5000);
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

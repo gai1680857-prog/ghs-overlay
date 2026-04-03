@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>GHS Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font-family:'Noto Sans TC',sans-serif}
+:root{--g1:#FFD700;--g2:#FFA500;--g3:#FFEC8B;--d:#08080A;--r:#FF4757;--p:#8B5CF6;--t:#00D4AA;--gl:rgba(8,8,10,0.72);--gb:rgba(255,215,0,0.35);--gg:rgba(255,215,0,0.15)}
+body::before{content:'';position:fixed;inset:0;z-index:9990;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.02) 2px,rgba(0,0,0,0.02) 4px)}
+body::after{content:'';position:fixed;inset:0;z-index:9989;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.35) 100%)}
+
+/* Particles */
+.ambient{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.amb{position:absolute;border-radius:50%;animation:af var(--d,8s) linear infinite}
+@keyframes af{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:0.8;transform:translateY(90vh) scale(1)}90%{opacity:0.3}100%{transform:translateY(-10vh) scale(0);opacity:0}}
+
+/* Light sweep */
+.sweep{position:fixed;inset:0;z-index:9988;pointer-events:none;overflow:hidden}
+.sweep-line{position:absolute;top:0;left:-20%;width:8%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,215,0,0.04),rgba(255,215,0,0.08),rgba(255,215,0,0.04),transparent);transform:skewX(-15deg);animation:swp 8s ease-in-out infinite}
+@keyframes swp{0%{left:-20%}100%{left:120%}}
+
+@keyframes borderPulse{0%,100%{box-shadow:0 0 16px var(--gg)}50%{box-shadow:0 0 28px rgba(255,215,0,0.25),0 0 56px rgba(255,215,0,0.08)}}
+
+/* === 1. LOGO === */
+.logo{position:absolute;left:18px;top:10px;width:120px;height:120px;z-index:50;animation:logoIn 1s cubic-bezier(0.34,1.56,0.64,1) both}
+@keyframes logoIn{0%{opacity:0;transform:scale(0) rotate(-20deg)}60%{opacity:1;transform:scale(1.15) rotate(5deg)}100%{transform:scale(1) rotate(0)}}
+.logo img{width:100%;height:100%;object-fit:contain;animation:logoFloat 3s ease-in-out infinite,logoGlow 2s ease-in-out infinite alternate}
+@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes logoGlow{0%{filter:drop-shadow(0 0 16px rgba(255,215,0,0.3))}100%{filter:drop-shadow(0 0 28px rgba(255,215,0,0.6))}}
+
+/* === 2. PLATFORMS === */
+.platforms{position:absolute;left:150px;top:24px;height:54px;z-index:50;display:flex;gap:10px;align-items:center}
+.plat{background:var(--gl);backdrop-filter:blur(16px);border:1.5px solid;border-radius:10px;padding:8px 16px 8px 12px;display:flex;align-items:center;gap:10px;animation:borderPulse 3s ease-in-out infinite}
+.plat-fb{border-color:rgba(24,119,242,0.4)}
+.plat-tw{border-color:rgba(145,70,255,0.4)}
+.plat-icon{width:28px;height:28px;flex-shrink:0}
+.plat-num{font-family:'Cinzel';font-weight:900;font-size:28px;text-shadow:0 0 12px currentColor}
+.plat-fb .plat-num{color:#4D9AFF}
+.plat-tw .plat-num{color:#B380FF}
+.plat-unit{font-size:12px;opacity:0.5;margin-left:2px}
+.plat-fb .plat-unit{color:#4D9AFF}
+.plat-tw .plat-unit{color:#B380FF}
+
+/* === 3. ENERGY BAR === */
+.energy{position:absolute;left:510px;top:30px;width:560px;height:40px;z-index:45;background:var(--gl);backdrop-filter:blur(16px);border:1.5px solid var(--gb);border-radius:20px;overflow:hidden;animation:borderPulse 3s ease-in-out infinite}
+.energy-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--g2),var(--g1),var(--g3));box-shadow:0 0 20px rgba(255,215,0,0.5);transition:width 1s ease;position:relative}
+.energy-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 30%,rgba(255,255,255,0.3) 50%,transparent 70%);animation:shine 2s ease-in-out infinite}
+@keyframes shine{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.energy-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Orbitron';font-size:14px;font-weight:700;color:var(--d);letter-spacing:2px;z-index:2}
+
+/* === 4. GAME NAME === */
+.game-tag{position:absolute;left:18px;top:140px;z-index:40;background:var(--gl);backdrop-filter:blur(16px);border:1px solid var(--gb);border-radius:10px;padding:8px 20px;display:flex;align-items:center;gap:10px;animation:borderPulse 3s ease-in-out infinite 0.5s}
+.game-dot{width:8px;height:8px;border-radius:2px;background:var(--t);box-shadow:0 0 6px var(--t)}
+.game-label{font-family:'JetBrains Mono';font-size:12px;color:rgba(255,255,255,0.4);letter-spacing:1px}
+.game-name{font-family:'Orbitron';font-size:20px;font-weight:700;color:var(--g1)}
+
+/* === 5. COUNTDOWN === */
+.countdown{position:absolute;left:18px;top:196px;z-index:40;background:var(--gl);backdrop-filter:blur(16px);border:1px solid rgba(255,71,87,0.3);border-radius:10px;padding:8px 20px;display:none;align-items:center;gap:12px}
+.countdown.show{display:flex}
+.cd-label{font-family:'JetBrains Mono';font-size:12px;color:var(--r);letter-spacing:1px}
+.cd-time{font-family:'Orbitron';font-size:24px;font-weight:900;color:var(--g1);letter-spacing:3px}
+.cd-event{font-size:14px;color:rgba(255,255,255,0.5)}
+
+/* === 6. WEBCAM === */
+.webcam{position:absolute;left:1310px;top:20px;width:600px;height:510px;z-index:30}
+.cam-glow{position:absolute;inset:-4px;border-radius:20px;border:4px solid transparent;background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3),var(--g1)) border-box;background-size:300% 300%;-webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:gs 3s ease infinite}
+@keyframes gs{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.cam-bg{position:absolute;inset:0;border-radius:16px;box-shadow:0 0 60px rgba(255,215,0,0.15),inset 0 0 60px rgba(0,0,0,0.3)}
+.cam-corners{position:absolute;inset:0;border-radius:16px;pointer-events:none}
+.cam-corners::before,.cam-corners::after{content:'';position:absolute;width:36px;height:36px;border-color:var(--g1);border-style:solid}
+.cam-corners::before{top:8px;left:8px;border-width:3px 0 0 3px;border-radius:8px 0 0 0}
+.cam-corners::after{bottom:8px;right:8px;border-width:0 3px 3px 0;border-radius:0 0 8px 0}
+.cam-tag{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,var(--g2),var(--g1));border-radius:20px;padding:6px 24px;box-shadow:0 4px 20px rgba(255,215,0,0.3)}
+.cam-tag span{font-family:'Orbitron';font-size:16px;font-weight:900;color:var(--d);letter-spacing:3px}
+.live-b{position:absolute;top:14px;right:14px;display:flex;align-items:center;gap:6px;background:rgba(255,71,87,0.3);backdrop-filter:blur(12px);border:1.5px solid rgba(255,71,87,0.6);border-radius:20px;padding:6px 16px}
+.live-dot{width:10px;height:10px;border-radius:50%;background:var(--r);animation:pulse 1.2s ease-in-out infinite;box-shadow:0 0 10px var(--r)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+.live-txt{font-family:'Orbitron';font-size:16px;font-weight:700;color:var(--r);letter-spacing:3px}
+
+/* === 7. CHAT === */
+.chat{position:absolute;left:1310px;top:540px;width:610px;height:500px;z-index:25;background:rgba(8,8,10,0.35);backdrop-filter:blur(8px);border:1px solid rgba(255,215,0,0.1);border-radius:14px;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;overflow:hidden;gap:4px;mask-image:linear-gradient(transparent 0%,black 20%);-webkit-mask-image:linear-gradient(transparent 0%,black 20%)}
+.chat-msg{background:rgba(255,255,255,0.04);border-radius:8px;padding:6px 12px;display:flex;gap:10px;align-items:baseline;animation:chatIn 0.3s ease-out}
+@keyframes chatIn{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:translateY(0)}}
+.chat-name{font-size:18px;font-weight:700;flex-shrink:0}
+.chat-text{font-size:18px;color:rgba(255,255,255,0.65)}
+.chat-plat{font-size:14px;opacity:0.4;flex-shrink:0}
+
+/* === 8. PROMO === */
+.promo{position:absolute;left:0;top:800px;width:960px;height:220px;z-index:30;perspective:1000px}
+.promo-card{position:absolute;inset:0;background:var(--gl);backdrop-filter:blur(24px);border:1.5px solid var(--gb);border-radius:16px;padding:24px 36px;display:flex;align-items:center;gap:32px;box-shadow:0 4px 40px rgba(0,0,0,0.3),0 0 30px var(--gg);opacity:0;transform:rotateY(90deg);transition:opacity 0.6s,transform 0.6s cubic-bezier(0.34,1.56,0.64,1);backface-visibility:hidden}
+.promo-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--g2),var(--g1),var(--g3));border-radius:16px 16px 0 0}
+.promo-card.active{opacity:1;transform:rotateY(0deg)}
+.promo-left{flex:1}
+.promo-tag{font-family:'JetBrains Mono';font-size:14px;font-weight:700;color:var(--g1);letter-spacing:2px;margin-bottom:8px}
+.promo-title{font-family:'Orbitron';font-size:28px;font-weight:700;color:#fff;margin-bottom:6px}
+.promo-desc{font-size:18px;color:rgba(255,255,255,0.45)}
+.promo-big{font-family:'Orbitron';font-size:60px;font-weight:900;background:linear-gradient(90deg,var(--g3),var(--g1),var(--g2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;flex-shrink:0}
+.promo-cta{display:inline-block;margin-top:10px;font-family:'Orbitron';font-size:14px;font-weight:700;color:var(--d);background:linear-gradient(90deg,var(--g1),var(--g2));padding:8px 24px;border-radius:20px;letter-spacing:2px;box-shadow:0 0 12px rgba(255,215,0,0.3)}
+.promo-dots{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5}
+.promo-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,215,0,0.2);transition:background 0.3s}
+.promo-dot.on{background:var(--g1);box-shadow:0 0 6px var(--g1)}
+
+/* === QR CODE === */
+.qr-box{position:absolute;left:970px;top:800px;width:220px;height:220px;z-index:30;background:var(--gl);backdrop-filter:blur(20px);border:1.5px solid var(--gb);border-radius:16px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px;animation:borderPulse 3s ease-in-out infinite 1s}
+.qr-ph{width:140px;height:140px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;color:#333;text-align:center;padding:8px}
+.qr-label{font-family:'Orbitron';font-size:12px;font-weight:700;color:var(--g1);letter-spacing:2px}
+.qr-id{font-family:'JetBrains Mono';font-size:14px;color:rgba(255,255,255,0.5)}
+
+/* === WINS TICKER === */
+.wins{position:absolute;left:0;top:1018px;width:1920px;height:22px;z-index:42;overflow:hidden}
+.wins.hidden{display:none}
+.wins-text{position:absolute;white-space:nowrap;font-family:'JetBrains Mono';font-size:14px;color:var(--g1);animation:wscr 25s linear infinite}
+@keyframes wscr{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
+
+/* === TICKER === */
+.ticker{position:absolute;left:0;top:1040px;width:1920px;height:40px;z-index:40;background:rgba(8,8,10,0.9);backdrop-filter:blur(20px);border-top:1.5px solid var(--gb);display:flex;align-items:center}
+.ticker-brand{flex-shrink:0;padding:0 24px;font-family:'Cinzel';font-size:20px;font-weight:900;background:linear-gradient(90deg,var(--g1),var(--g2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px;border-right:1px solid rgba(255,215,0,0.15)}
+.ticker-scroll{flex:1;overflow:hidden;position:relative;height:24px}
+.ticker-text{position:absolute;white-space:nowrap;font-size:18px;color:rgba(255,255,255,0.55);animation:scr 35s linear infinite}
+@keyframes scr{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
+.ticker-text .hl{color:var(--g1);font-weight:700}
+.ticker-text .tl{color:var(--t)}
+.ticker-cta{flex-shrink:0;padding:0 24px;display:flex;align-items:center;gap:10px;border-left:1px solid rgba(255,215,0,0.15)}
+.ticker-cta-lbl{font-size:14px;color:rgba(255,215,0,0.5)}
+.ticker-cta-id{font-family:'Orbitron';font-size:20px;font-weight:700;color:var(--g1);letter-spacing:2px}
+
+/* === ALERT === */
+.alert-wrap{position:absolute;left:70px;top:250px;width:500px;height:240px;z-index:100;pointer-events:none}
+.alert-box{width:100%;height:100%;background:var(--gl);backdrop-filter:blur(30px);border:2px solid var(--g1);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 60px rgba(255,215,0,0.2),0 20px 60px rgba(0,0,0,0.5);opacity:0;transform:scale(0.8);transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1)}
+.alert-box.show{opacity:1;transform:scale(1)}
+.alert-box.hide{opacity:0;transform:scale(0.9)}
+.alert-type{font-family:'JetBrains Mono';font-size:16px;font-weight:700;letter-spacing:3px;margin-bottom:8px}
+.alert-type.follow{color:var(--t)}.alert-type.sub{color:var(--p)}.alert-type.tip{color:var(--g1)}.alert-type.share{color:#FF6B35}
+.alert-user{font-family:'Orbitron';font-size:36px;font-weight:900;color:#fff;margin-bottom:6px;overflow:hidden;white-space:nowrap}
+.alert-msg{font-size:20px;color:rgba(255,255,255,0.55)}
+.alert-amount{font-family:'Orbitron';font-size:48px;font-weight:900;margin-top:6px;background:linear-gradient(90deg,var(--g3),var(--g1),var(--g2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:none}
+
+/* Red envelope rain */
+.rain{position:absolute;inset:0;pointer-events:none;z-index:90;overflow:hidden}
+.env{position:absolute;top:-60px;width:44px;height:54px;background:linear-gradient(180deg,#FF4444,#CC0000);border-radius:4px 4px 8px 8px;box-shadow:0 4px 20px rgba(255,0,0,0.4),0 0 12px rgba(255,215,0,0.2);animation:fall var(--dur,3s) linear forwards}
+.env::before{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,#FF6666,#FF4444);border-radius:4px 4px 0 0;clip-path:polygon(0 0,100% 0,100% 60%,50% 100%,0 60%)}
+.env::after{content:'$';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Orbitron';font-size:16px;font-weight:900;color:var(--g1)}
+@keyframes fall{0%{transform:translateY(0) rotate(var(--r1,0));opacity:1}85%{opacity:1}100%{transform:translateY(1140px) rotate(var(--r2,20deg));opacity:0}}
+</style>
+</head>
+<body>
+<div class="ambient" id="amb"></div>
+<div class="sweep"><div class="sweep-line"></div></div>
+
+<div class="platforms">
+  <div class="plat plat-fb">
+    <svg class="plat-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#1877F2"/><path d="M16.5 12.5h-2.5v7h-3v-7h-2v-2.5h2v-1.5c0-2.2 1-3.5 3.3-3.5h2.2v2.5h-1.4c-0.8 0-1.1 0.4-1.1 1v1.5h2.5l-0.5 2.5z" fill="#fff"/></svg>
+    <span class="plat-num" id="fbNum">0</span><span class="plat-unit">人</span>
+  </div>
+  <div class="plat plat-tw">
+    <svg class="plat-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#9146FF"/><path d="M6 4l-1 3v11h4v2h2l2-2h3l4-4V4H6zm12 9l-2 2h-3l-2 2v-2H8V6h10v7z" fill="#fff"/><rect x="13" y="8" width="1.5" height="4" rx="0.5" fill="#fff"/><rect x="10" y="8" width="1.5" height="4" rx="0.5" fill="#fff"/></svg>
+    <span class="plat-num" id="twNum">0</span><span class="plat-unit">人</span>
+  </div>
+</div>
+
+<div class="energy">
+  <div class="energy-fill" id="eFill" style="width:0%"></div>
+  <div class="energy-label" id="eLabel">能量 0% ─ 100% 發紅包</div>
+</div>
+
+<div class="game-tag">
+  <div class="game-dot"></div>
+  <div class="game-label">NOW PLAYING</div>
+  <div class="game-name" id="gameName">Fortune Tiger</div>
+</div>
+
+<div class="countdown" id="countdown">
+  <div class="cd-label">EVENT</div>
+  <div class="cd-time" id="cdTime">00:30:00</div>
+  <div class="cd-event" id="cdEvent">紅包雨倒計時</div>
+</div>
+
+<div class="webcam">
+  <div class="cam-glow"></div>
+  <div class="cam-bg"></div>
+  <div class="cam-corners"></div>
+  <div class="cam-tag"><span>GAI168</span></div>
+  <div class="live-b"><div class="live-dot"></div><div class="live-txt">LIVE</div></div>
+</div>
+
+<div class="chat" id="chat"></div>
+
+<div class="promo">
+  <div class="promo-card active" data-i="0">
+    <div class="promo-left"><div class="promo-tag">// 新會員</div><div class="promo-title">註冊獎勵</div><div class="promo-desc">新會員免費點數</div><div class="promo-cta">立即加入</div></div>
+    <div class="promo-big">12,888</div>
+  </div>
+  <div class="promo-card" data-i="1">
+    <div class="promo-left"><div class="promo-tag">// 每日</div><div class="promo-title">每日簽到</div><div class="promo-desc">每天登入領取</div><div class="promo-cta">領取</div></div>
+    <div class="promo-big">888</div>
+  </div>
+  <div class="promo-card" data-i="2">
+    <div class="promo-left"><div class="promo-tag">// LINE</div><div class="promo-title">官方 LINE</div><div class="promo-desc">VIP女神群專屬優惠</div><div class="promo-cta" style="background:linear-gradient(90deg,var(--t),#00E4BB)">立即加入</div></div>
+    <div class="promo-big" style="font-size:40px;background:linear-gradient(90deg,var(--t),#00E4BB);-webkit-background-clip:text;-webkit-text-fill-color:transparent">@dian168</div>
+  </div>
+  <div class="promo-dots"><div class="promo-dot on"></div><div class="promo-dot"></div><div class="promo-dot"></div></div>
+</div>
+
+<div class="qr-box" id="qrBox">
+  <div class="qr-ph">QR Code<br>之後放圖</div>
+  <div class="qr-label">SCAN ME</div>
+  <div class="qr-id">gaifun.com</div>
+</div>
+
+<div class="wins" id="wins">
+  <div class="wins-text" id="winsText"></div>
+</div>
+
+<div class="ticker">
+  <div class="ticker-brand">蓋厚勝</div>
+  <div class="ticker-scroll"><div class="ticker-text"><span class="hl">合法娛樂城</span> | <span class="hl">註冊送 12,888</span> | <span class="tl">每日簽到 888</span> | 每晚直播 | <span class="hl">老虎機大賽獎池 10萬</span> | <span class="tl">VIP女神群 首存100%</span> | gaifun.com</div></div>
+  <div class="ticker-cta"><div class="ticker-cta-lbl">LINE</div><div class="ticker-cta-id">@dian168</div></div>
+</div>
+
+<div class="alert-wrap" id="alertWrap">
+  <div class="alert-box" id="aBox">
+    <div class="alert-type" id="aType"></div>
+    <div class="alert-user" id="aUser"></div>
+    <div class="alert-msg" id="aMsg"></div>
+    <div class="alert-amount" id="aAmt"></div>
+  </div>
+</div>
+
+<div class="rain" id="rain"></div>
+
+<script>
+const WORKER = 'https://ghs-stream-api.gai1680857.workers.dev';
+
+/* ─── AMBIENT PARTICLES ─── */
+const amb = document.getElementById('amb');
+for (let i = 0; i < 20; i++) {
+  const d = document.createElement('div'); d.className = 'amb';
+  d.style.left = (Math.random() * 1920) + 'px';
+  d.style.setProperty('--d', (6 + Math.random() * 10) + 's');
+  d.style.animationDelay = (Math.random() * 8) + 's';
+  const c = ['rgba(255,215,0,0.35)','rgba(255,236,139,0.3)','rgba(255,165,0,0.25)','rgba(0,212,170,0.15)'];
+  d.style.background = c[Math.floor(Math.random() * c.length)];
+  const s = 1 + Math.random() * 3; d.style.width = s + 'px'; d.style.height = s + 'px';
+  amb.appendChild(d);
+}
+
+/* ─── DEMO MODE (runs when API inactive) ─── */
+let demoActive = false;
+let demoViewerInterval = null, demoChatInterval = null;
+const colors = ['#FFD700','#00D4AA','#FFA500','#00B8D4','#FFEC8B','#FF4757','#8B5CF6'];
+const names = ['Player99','LuckyKing','GoldFish','BigWinner','VIP888','SlotMaster','Dragon88','Phoenix7','Tiger666'];
+const msgs = ['nice hit!','大獎!','lol','GG','LEGENDARY!','!register','!spin','crazy spin','go go go','haha','wow!!!','紅包雨快來了','能量快滿了','666','爆了!'];
+
+function startDemo() {
+  if (demoActive) return;
+  demoActive = true;
+  let fb = 89, tw = 38;
+  demoViewerInterval = setInterval(() => {
+    fb += Math.floor(Math.random() * 5) - 2; if (fb < 20) fb = 20;
+    tw += Math.floor(Math.random() * 4) - 2; if (tw < 10) tw = 10;
+    document.getElementById('fbNum').textContent = fb;
+    document.getElementById('twNum').textContent = tw;
+  }, 5000);
+  const chatEl = document.getElementById('chat');
+  function addMsg() {
+    const el = document.createElement('div'); el.className = 'chat-msg';
+    const p = ['FB','TW'][Math.floor(Math.random() * 2)];
+    const n = names[Math.floor(Math.random() * names.length)];
+    const m = msgs[Math.floor(Math.random() * msgs.length)];
+    const c = colors[Math.floor(Math.random() * colors.length)];
+    el.innerHTML = '<span class="chat-plat">' + p + '</span><span class="chat-name" style="color:' + c + '">' + n + '</span><span class="chat-text">' + m + '</span>';
+    chatEl.appendChild(el);
+    if (chatEl.children.length > 15) chatEl.removeChild(chatEl.firstChild);
+  }
+  for (let i = 0; i < 6; i++) addMsg();
+  demoChatInterval = setInterval(addMsg, 2500);
+}
+
+function stopDemo() {
+  demoActive = false;
+  clearInterval(demoViewerInterval);
+  clearInterval(demoChatInterval);
+}
+
+/* ─── PROMO FLIP ─── */
+const cards = document.querySelectorAll('.promo-card');
+const dots = document.querySelectorAll('.promo-dot');
+let ci = 0;
+setInterval(() => {
+  cards[ci].classList.remove('active');
+  cards[ci].style.transform = 'rotateY(-90deg)';
+  dots[ci].classList.remove('on');
+  ci = (ci + 1) % cards.length;
+  setTimeout(() => { cards[ci].classList.add('active'); cards[ci].style.transform = ''; dots[ci].classList.add('on'); }, 300);
+}, 8000);
+
+/* ─── ENERGY BAR ─── */
+let energy = 0;
+const eFill = document.getElementById('eFill'), eLabel = document.getElementById('eLabel');
+function setEnergy(v) {
+  energy = Math.max(0, Math.min(100, v));
+  eFill.style.width = energy + '%';
+  eLabel.textContent = energy >= 90 ? '能量 ' + energy + '% ─ 快滿了!' : '能量 ' + energy + '% ─ 100% 發紅包';
+  if (energy >= 100) { energy = 0; triggerRedEnvelope(); }
+}
+
+/* ─── COUNTDOWN ─── */
+let cdSec = 1800, cdOn = false;
+const cdEl = document.getElementById('countdown'), cdTime = document.getElementById('cdTime');
+function startCountdown(sec, label) {
+  cdSec = sec;
+  if (label) document.getElementById('cdEvent').textContent = label;
+  cdOn = true;
+  cdEl.classList.add('show');
+}
+function stopCountdown() {
+  cdOn = false;
+  cdEl.classList.remove('show');
+}
+setInterval(() => {
+  if (!cdOn) return;
+  cdSec--;
+  if (cdSec <= 0) { stopCountdown(); return; }
+  const h = Math.floor(cdSec / 3600), m = Math.floor((cdSec % 3600) / 60), s = cdSec % 60;
+  cdTime.textContent = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}, 1000);
+
+/* ─── ALERT ─── */
+const aBox = document.getElementById('aBox'), aType = document.getElementById('aType');
+const aUser = document.getElementById('aUser'), aMsg = document.getElementById('aMsg'), aAmt = document.getElementById('aAmt');
+const aq = []; let aa = false;
+
+function typewriter(el, text, speed) {
+  el.textContent = ''; let i = 0;
+  const iv = setInterval(() => { if (i >= text.length) { clearInterval(iv); return; } el.textContent += text[i]; i++; }, speed || 50);
+}
+
+function firewerk(x, y) {
+  const fColors = ['#FFD700','#FF6B35','#00D4AA','#FF4757','#FFEC8B','#8B5CF6'];
+  for (let i = 0; i < 30; i++) {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;width:5px;height:5px;border-radius:50%;left:' + x + 'px;top:' + y + 'px;background:' + fColors[Math.floor(Math.random() * fColors.length)];
+    const angle = Math.random() * Math.PI * 2, dist = 60 + Math.random() * 120;
+    d.style.setProperty('--fx', Math.cos(angle) * dist + 'px');
+    d.style.setProperty('--fy', Math.sin(angle) * dist + 'px');
+    d.style.animation = 'fwEx 0.8s ease-out forwards';
+    d.style.animationDelay = (Math.random() * 0.2) + 's';
+    document.body.appendChild(d); setTimeout(() => d.remove(), 1200);
+  }
+}
+
+function showAlert(type, user, msg, amount) { aq.push({ type, user, msg, amount }); processQ(); }
+function processQ() {
+  if (aa || aq.length === 0) return; aa = true;
+  const { type, user, msg, amount } = aq.shift();
+  const ls = { follow: '新追蹤', sub: '新訂閱', tip: '新打賞', share: '新分享' };
+  const bc = { follow: 'var(--t)', sub: 'var(--p)', tip: 'var(--g1)', share: '#FF6B35' };
+  aBox.style.borderColor = bc[type];
+  aType.className = 'alert-type ' + type; aType.textContent = ls[type];
+  typewriter(aUser, user, 60);
+  aMsg.textContent = msg;
+  if (amount) { aAmt.textContent = amount; aAmt.style.display = 'block'; }
+  else { aAmt.style.display = 'none'; }
+  aBox.className = 'alert-box show';
+  const rect = document.getElementById('alertWrap').getBoundingClientRect();
+  firewerk(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  setTimeout(() => firewerk(rect.left + 100, rect.top + 50), 200);
+  setTimeout(() => firewerk(rect.right - 100, rect.top + 80), 400);
+  setTimeout(() => { aBox.className = 'alert-box hide'; setTimeout(() => { aBox.className = 'alert-box'; aa = false; processQ(); }, 400); }, 4500);
+}
+
+/* ─── RED ENVELOPE ─── */
+function triggerRedEnvelope() {
+  const r = document.getElementById('rain');
+  for (let i = 0; i < 30; i++) {
+    const e = document.createElement('div'); e.className = 'env';
+    e.style.left = (Math.random() * 1920) + 'px';
+    e.style.setProperty('--dur', (2 + Math.random() * 2) + 's');
+    e.style.setProperty('--r1', (Math.random() * 30 - 15) + 'deg');
+    e.style.setProperty('--r2', (Math.random() * 60 - 30) + 'deg');
+    e.style.animationDelay = (Math.random() * 2) + 's';
+    r.appendChild(e); setTimeout(() => e.remove(), 5000);
+  }
+}
+
+/* ─── AUTO SCALE ─── */
+function autoScale() {
+  const w = window.innerWidth, h = window.innerHeight;
+  const scale = Math.min(w / 1920, h / 1080);
+  document.body.style.transform = 'scale(' + scale + ')';
+  document.body.style.transformOrigin = 'top left';
+}
+autoScale(); window.addEventListener('resize', autoScale);
+
+/* ─── LIVE API POLLING ─── */
+let apiActive = false, apiInterval = null;
+const shownMsgIds = new Set();
+
+function startApi(fbVideoId, twChannel) {
+  apiActive = true;
+  stopDemo();
+  function poll() {
+    const params = new URLSearchParams();
+    if (fbVideoId) params.set('fb_video_id', fbVideoId);
+    if (twChannel) params.set('twitch_channel', twChannel);
+    const qs = params.toString();
+    fetch(WORKER + '/api/chat?' + qs).then(r => r.json()).then(d => {
+      if (d.all && d.all.length > 0) renderLiveChat(d.all);
+    }).catch(() => {});
+    fetch(WORKER + '/api/viewers?' + qs).then(r => r.json()).then(d => {
+      if (d.fb !== undefined) document.getElementById('fbNum').textContent = d.fb || 0;
+      if (d.tw !== undefined) document.getElementById('twNum').textContent = d.tw || 0;
+    }).catch(() => {});
+  }
+  poll();
+  apiInterval = setInterval(poll, 3000);
+}
+
+function stopApi() {
+  apiActive = false;
+  clearInterval(apiInterval);
+  apiInterval = null;
+  startDemo();
+}
+
+function renderLiveChat(messages) {
+  const chatEl = document.getElementById('chat');
+  messages.forEach(msg => {
+    if (shownMsgIds.has(msg.id)) return;
+    shownMsgIds.add(msg.id);
+    const el = document.createElement('div'); el.className = 'chat-msg';
+    const nameColor = colors[Math.floor(Math.random() * colors.length)];
+    el.innerHTML = '<span class="chat-plat">' + msg.platform + '</span>' +
+      '<span class="chat-name" style="color:' + nameColor + '">' + esc(msg.name) + '</span>' +
+      '<span class="chat-text">' + esc(msg.text) + '</span>';
+    chatEl.appendChild(el);
+  });
+  while (chatEl.children.length > 15) chatEl.removeChild(chatEl.firstChild);
+  if (shownMsgIds.size > 500) {
+    const arr = Array.from(shownMsgIds);
+    arr.splice(0, 300).forEach(id => shownMsgIds.delete(id));
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ─── STATE SYNC ─── */
+let lastState = {};
+async function syncState() {
+  try {
+    const r = await fetch(WORKER + '/api/state');
+    const s = await r.json();
+
+    // Energy
+    if (s.energy !== lastState.energy) setEnergy(s.energy || 0);
+
+    // Game name
+    if (s.gameName && s.gameName !== lastState.gameName)
+      document.getElementById('gameName').textContent = s.gameName;
+
+    // Countdown
+    if (s.countdownOn && !lastState.countdownOn)
+      startCountdown(s.countdownSec || 1800, s.countdownLabel);
+    else if (!s.countdownOn && lastState.countdownOn)
+      stopCountdown();
+
+    // QR
+    if (s.qrOn !== lastState.qrOn)
+      document.getElementById('qrBox').style.display = s.qrOn !== false ? '' : 'none';
+
+    // Wins ticker
+    if (s.winsOn !== lastState.winsOn)
+      document.getElementById('wins').classList.toggle('hidden', s.winsOn === false);
+
+    // API active
+    if (s.apiActive && !lastState.apiActive)
+      startApi(s.fbVideoId || '', s.twChannel || '');
+    else if (!s.apiActive && lastState.apiActive)
+      stopApi();
+
+    lastState = s;
+  } catch {}
+}
+
+/* ─── COMMAND POLLING ─── */
+async function syncCommands() {
+  try {
+    const r = await fetch(WORKER + '/api/commands');
+    const { commands } = await r.json();
+    commands.forEach(cmd => {
+      if (cmd.type === 'redEnvelope') triggerRedEnvelope();
+      if (cmd.type === 'alert') showAlert(cmd.alertType, cmd.user, cmd.msg, cmd.amount);
+    });
+  } catch {}
+}
+
+/* ─── INIT ─── */
+startDemo();
+syncState();
+syncCommands();
+setInterval(syncState, 2000);
+setInterval(syncCommands, 2000);
+</script>
+</body>
+</html>
