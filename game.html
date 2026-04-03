@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>GHS 互動系統</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0A0A0C;--s1:#111114;--s2:#18181C;--s3:#1E1E24;
+  --o:#FF6B35;--o2:#FF8C5A;--t:#00C49A;--t2:#00E0B0;
+  --p:#7F77DD;--y:#FAC775;--r:#E24B4A;
+  --txt:#E8E8F0;--txt2:#888896;--txt3:#44444E;
+  --border:#222228;
+}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,'Noto Sans TC',sans-serif;overflow:hidden;font-size:15px}
+
+/* ── Shell ── */
+.shell{display:flex;flex-direction:column;height:100%}
+
+/* ── Status bar ── */
+.statusbar{height:44px;background:var(--s1);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0}
+.sb-left{display:flex;align-items:center;gap:8px}
+.sb-logo{font-size:13px;font-weight:800;letter-spacing:3px;color:var(--o)}
+.sb-live{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--r);background:rgba(226,75,74,0.12);padding:3px 9px;border-radius:20px;border:1px solid rgba(226,75,74,0.2)}
+.sb-live.off{color:var(--txt3);background:rgba(255,255,255,0.04);border-color:var(--border)}
+.sb-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:blink 1.4s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.sb-live.off .sb-dot{animation:none}
+.sb-conn{font-size:11px;color:var(--txt3);display:flex;align-items:center;gap:4px}
+.sb-conn svg{opacity:.5}
+
+/* ── Tabs ── */
+.pages{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow-y:auto;padding:12px;display:none;flex-direction:column;gap:10px}
+.page.active{display:flex}
+
+/* ── Tab bar ── */
+.tabbar{height:60px;background:var(--s1);border-top:1px solid var(--border);display:flex;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
+.tabitem{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;border:none;background:none;color:var(--txt3);transition:.15s;font-size:10px;letter-spacing:.5px;font-family:inherit}
+.tabitem.active{color:var(--o)}
+.tabitem svg{transition:.15s}
+.tabitem.active svg{filter:drop-shadow(0 0 4px rgba(255,107,53,.5))}
+
+/* ── Card ── */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.card-hd{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--border)}
+.card-hd-left{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--txt)}
+.card-hd-left svg{color:var(--o)}
+.card-bd{padding:14px}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;transition:.12s;font-family:inherit;white-space:nowrap}
+.btn:active{opacity:.75;transform:scale(.97)}
+.btn-o{background:var(--o);color:#fff}
+.btn-t{background:var(--t);color:#0A0A0C}
+.btn-r{background:rgba(226,75,74,.18);color:var(--r);border:1px solid rgba(226,75,74,.3)}
+.btn-g{background:var(--s2);color:var(--txt2);border:1px solid var(--border)}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px}
+.btn-full{width:100%;padding:12px}
+.btn-row{display:grid;gap:8px}
+.btn-row.c2{grid-template-columns:1fr 1fr}
+.btn-row.c3{grid-template-columns:1fr 1fr 1fr}
+.btn-row.c4{grid-template-columns:repeat(4,1fr)}
+
+/* ── Input ── */
+input,select,textarea{background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--txt);padding:10px 12px;font-size:14px;font-family:inherit;width:100%;outline:none;transition:.2s}
+input:focus,select:focus{border-color:var(--o)}
+select option{background:var(--s1)}
+.field{margin-bottom:10px}
+.field-label{font-size:11px;font-weight:700;color:var(--txt3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px}
+
+/* ── FX Grid ── */
+.fx-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.fx-cell{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;transition:.15s}
+.fx-cell:active{background:var(--s3);transform:scale(.95)}
+.fx-cell.fired{border-color:var(--o);background:rgba(255,107,53,.1)}
+.fx-cell-icon{width:28px;height:28px;margin:0 auto 6px;color:var(--o)}
+.fx-cell-label{font-size:11px;color:var(--txt2);font-weight:600}
+
+/* ── Vote bars ── */
+.vote-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.vote-key{width:18px;font-size:12px;font-weight:800;color:var(--txt3);flex-shrink:0}
+.vote-track{flex:1;height:28px;background:var(--s2);border-radius:7px;overflow:hidden;position:relative}
+.vote-fill{height:100%;border-radius:7px;display:flex;align-items:center;padding-left:10px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.vote-fill span{font-size:12px;color:rgba(255,255,255,.9);font-weight:700}
+.vote-pct{width:34px;font-size:12px;color:var(--txt3);text-align:right;flex-shrink:0}
+
+/* ── HP bars ── */
+.fighters{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:10px}
+.fighter{background:var(--s2);border-radius:10px;padding:12px;text-align:center}
+.fighter-label{font-size:10px;color:var(--txt3);font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px}
+.fighter-hp{font-size:24px;font-weight:900;margin-bottom:6px}
+.hp-track{height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
+.hp-fill{height:100%;border-radius:3px;transition:width .4s}
+.vs{font-size:14px;font-weight:900;color:var(--txt3)}
+.battle-log{background:var(--bg);border-radius:8px;padding:8px 10px;height:84px;overflow-y:auto;font-size:12px;display:flex;flex-direction:column;gap:2px;margin-bottom:10px}
+.log{color:var(--txt3)}.log.hit{color:var(--o)}.log.crit{color:var(--y);font-weight:700}.log.info{color:var(--t)}
+
+/* ── Energy slider ── */
+.energy-num{font-size:56px;font-weight:900;color:var(--o);text-align:center;line-height:1;letter-spacing:-2px}
+.energy-track{height:8px;background:var(--s2);border-radius:4px;overflow:hidden;margin:12px 0}
+.energy-fill{height:100%;background:linear-gradient(90deg,var(--o),var(--y));border-radius:4px;transition:width .4s}
+input[type=range]{-webkit-appearance:none;appearance:none;height:40px;background:transparent;width:100%;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;background:var(--o);border-radius:50%;border:3px solid var(--bg);margin-top:-10px}
+input[type=range]::-webkit-slider-runnable-track{height:6px;background:var(--s2);border-radius:3px}
+
+/* ── Toggle ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none;padding-bottom:0}
+.toggle-info h4{font-size:14px;font-weight:600}
+.toggle-info p{font-size:12px;color:var(--txt3);margin-top:2px}
+.sw{position:relative;width:46px;height:26px;flex-shrink:0}
+.sw input{opacity:0;position:absolute;width:0;height:0}
+.sw-track{position:absolute;inset:0;background:var(--s3);border-radius:26px;cursor:pointer;transition:.2s}
+.sw input:checked+.sw-track{background:var(--t)}
+.sw-track::after{content:'';position:absolute;width:20px;height:20px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.sw input:checked+.sw-track::after{transform:translateX(20px)}
+
+/* ── Wheel ── */
+.wheel-wrap{display:flex;gap:14px;align-items:center}
+.wheel-rel{position:relative;flex-shrink:0}
+.wheel-rel canvas{border-radius:50%;display:block}
+.wheel-ptr{position:absolute;top:50%;right:-10px;transform:translateY(-50%);width:0;height:0;border-top:10px solid transparent;border-bottom:10px solid transparent;border-right:18px solid var(--o)}
+.wheel-result-area{flex:1}
+.wheel-result-title{font-size:11px;color:var(--txt3);font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px}
+.wheel-result-val{font-size:16px;font-weight:700;color:var(--y);margin-bottom:10px;min-height:24px}
+.punish-chips{display:flex;flex-wrap:wrap;gap:5px}
+.punish-chip{font-size:10px;color:var(--txt3);background:var(--s2);padding:3px 8px;border-radius:20px;border:1px solid var(--border)}
+
+/* ── Pet ── */
+.pet-wrap{display:flex;gap:14px;align-items:flex-start}
+.pet-face{width:70px;height:70px;background:var(--s2);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0;border:1px solid var(--border)}
+.pet-face-svg{width:44px;height:44px}
+.pet-stats{flex:1}
+.pet-name{font-size:15px;font-weight:800;color:var(--t);margin-bottom:2px}
+.pet-lv{font-size:11px;color:var(--txt3);margin-bottom:8px}
+.stat-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.stat-lbl{font-size:10px;color:var(--txt3);width:26px;flex-shrink:0}
+.stat-track{flex:1;height:6px;background:var(--s2);border-radius:3px;overflow:hidden}
+.stat-fill{height:100%;border-radius:3px;transition:width .4s}
+.stat-val{font-size:10px;color:var(--txt3);width:24px;text-align:right;flex-shrink:0}
+.pet-mood{font-size:12px;color:var(--txt2);margin-top:10px;padding:8px 10px;background:var(--s2);border-radius:8px}
+
+/* ── Hongbao area ── */
+.hb-stage{position:relative;height:110px;background:var(--s2);border-radius:10px;overflow:hidden;margin-bottom:10px;border:1px solid var(--border)}
+.hb-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--txt3)}
+.hb-packet{position:absolute;width:34px;height:46px;background:var(--r);border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid rgba(255,255,255,.15);animation:fall var(--d,3s) linear infinite;top:-50px}
+.hb-packet::after{content:'$';position:absolute;font-size:14px;font-weight:900;color:var(--y)}
+@keyframes fall{0%{top:-50px}100%{top:120px}}
+.hb-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.hb-stat{background:var(--s2);border-radius:8px;padding:8px 4px;text-align:center}
+.hb-stat-val{font-size:16px;font-weight:800;color:var(--o)}
+.hb-stat-lbl{font-size:10px;color:var(--txt3);margin-top:2px}
+
+/* ── Poll ── */
+.poll-opt{display:flex;align-items:center;gap:8px;margin-bottom:7px;cursor:pointer}
+.poll-lbl{font-size:12px;color:var(--txt2);width:110px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.poll-track{flex:1;height:30px;background:var(--s2);border-radius:7px;overflow:hidden;transition:.15s}
+.poll-track:active{opacity:.8}
+.poll-fill{height:100%;display:flex;align-items:center;padding-left:10px;transition:width .5s}
+.poll-fill span{font-size:12px;font-weight:700;color:rgba(255,255,255,.9)}
+
+/* ── Countdown overlay ── */
+#cd-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:99}
+.cd-big{font-size:110px;font-weight:900;color:var(--o);line-height:1;letter-spacing:-4px}
+.cd-result{font-size:28px;font-weight:700;color:var(--t);margin-top:12px}
+
+/* ── Toast ── */
+#toasts{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+.toast{background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:9px 18px;font-size:13px;color:var(--txt);animation:tin .25s ease;white-space:nowrap}
+.toast.ok{border-color:var(--t);color:var(--t)}
+.toast.warn{border-color:var(--y);color:var(--y)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Status bar -->
+  <div class="statusbar">
+    <div class="sb-left">
+      <div class="sb-logo">GHS</div>
+      <div class="sb-live off" id="liveStatus">
+        <div class="sb-dot"></div>
+        <span id="liveTxt">OFFLINE</span>
+      </div>
+    </div>
+    <div class="sb-conn">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+      <span id="connTxt">連線中</span>
+    </div>
+  </div>
+
+  <!-- Pages -->
+  <div class="pages">
+
+    <!-- FX -->
+    <div class="page active" id="p-fx">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            特效觸發
+          </div>
+          <button class="btn btn-g btn-sm" onclick="clearFx()">清除全部</button>
+        </div>
+        <div class="card-bd">
+          <div class="field">
+            <div class="field-label">觀眾指令輸入</div>
+            <input id="cmdInput" placeholder="輸入指令如 !burst !coin !firework" oninput="matchCmd(this.value)">
+          </div>
+          <div class="fx-grid" id="fxGrid"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            快速發送
+          </div>
+        </div>
+        <div class="card-bd">
+          <div class="btn-row c2">
+            <button class="btn btn-r btn-full" onclick="sendCmd('redEnvelope')">發射紅包雨</button>
+            <button class="btn btn-g btn-full" onclick="sendCmd('firework')">煙火</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vote -->
+    <div class="page" id="p-vote">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
+            即時投票
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-g btn-sm" onclick="simVote()">模擬</button>
+            <button class="btn btn-o btn-sm" onclick="resetVote()">重置</button>
+          </div>
+        </div>
+        <div class="card-bd">
+          <div style="font-size:14px;font-weight:600;margin-bottom:12px" id="voteQ">今晚要玩哪個遊戲？</div>
+          <div id="voteBars"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+            <span style="font-size:12px;color:var(--txt3)" id="voteTotal">總票數 0</span>
+            <button class="btn btn-t btn-sm" onclick="announceVote()">公布結果</button>
+          </div>
+          <div style="height:4px;background:var(--s2);border-radius:2px;overflow:hidden;margin-top:10px">
+            <div style="height:100%;background:var(--o);border-radius:2px;transition:width .5s" id="voteTimer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            即時民調
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-g btn-sm" onclick="simPoll()">模擬</button>
+            <button class="btn btn-g btn-sm" onclick="resetPoll()">重置</button>
+          </div>
+        </div>
+        <div class="card-bd">
+          <div style="font-size:14px;font-weight:600;margin-bottom:12px">你覺得今天主播玩得怎樣？</div>
+          <div id="pollBars"></div>
+          <div style="font-size:12px;color:var(--txt3);margin-top:8px" id="pollTotal">點擊選項投票 · 0 票</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Battle -->
+    <div class="page" id="p-battle">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="14.5" y1="17.5" x2="3" y2="6"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="21" x2="21" y2="16"/><line x1="2" y1="3" x2="5" y2="6"/><line x1="7" y1="8" x2="9.5" y2="5.5"/></svg>
+            主播對戰
+          </div>
+          <button class="btn btn-g btn-sm" onclick="resetBattle()">重置</button>
+        </div>
+        <div class="card-bd">
+          <div class="fighters">
+            <div class="fighter">
+              <div class="fighter-label">主播</div>
+              <div class="fighter-hp" style="color:var(--o)" id="hpHost">85</div>
+              <div class="hp-track"><div class="hp-fill" id="hpHostBar" style="width:85%;background:var(--o)"></div></div>
+            </div>
+            <div class="vs">VS</div>
+            <div class="fighter">
+              <div class="fighter-label">觀眾</div>
+              <div class="fighter-hp" style="color:var(--t)" id="hpAud">72</div>
+              <div class="hp-track"><div class="hp-fill" id="hpAudBar" style="width:72%;background:var(--t)"></div></div>
+            </div>
+          </div>
+          <div class="battle-log" id="battleLog">
+            <div class="log info">對戰開始，輸入指令參戰</div>
+          </div>
+          <div class="btn-row c4">
+            <button class="btn btn-g btn-sm" onclick="attack('普通攻擊',8,18)">攻擊</button>
+            <button class="btn btn-g btn-sm" onclick="attack('魔法',15,25)">魔法</button>
+            <button class="btn btn-o btn-sm" onclick="attack('必殺技',30,50)">必殺</button>
+            <button class="btn btn-t btn-sm" onclick="heal()">治療</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            倒數結算
+          </div>
+        </div>
+        <div class="card-bd">
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+            <div class="field" style="margin:0;flex:1">
+              <div class="field-label">秒數</div>
+              <select id="cdSec"><option>10</option><option>20</option><option selected>30</option><option>60</option><option>120</option></select>
+            </div>
+            <div class="field" style="margin:0;flex:2">
+              <div class="field-label">結算訊息</div>
+              <input id="cdMsg" value="投注截止！">
+            </div>
+            <button class="btn btn-o" onclick="startCD()" style="margin-bottom:0;flex-shrink:0">開始</button>
+            <div style="font-size:28px;font-weight:900;color:var(--o);min-width:40px;text-align:center" id="cdDisplay">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hongbao / Wheel -->
+    <div class="page" id="p-hb">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+            紅包雨
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-r btn-sm" onclick="startHB()">發射</button>
+            <button class="btn btn-g btn-sm" onclick="stopHB()">停止</button>
+          </div>
+        </div>
+        <div class="card-bd">
+          <div class="hb-stage" id="hbStage" onclick="grabHB(event)">
+            <div class="hb-empty" id="hbHint">點擊「發射」開始紅包雨</div>
+          </div>
+          <div class="hb-stats">
+            <div class="hb-stat"><div class="hb-stat-val" id="hbTotal">0</div><div class="hb-stat-lbl">發出</div></div>
+            <div class="hb-stat"><div class="hb-stat-val" id="hbGrab">0</div><div class="hb-stat-lbl">已搶</div></div>
+            <div class="hb-stat"><div class="hb-stat-val" id="hbLeft">0</div><div class="hb-stat-lbl">剩餘</div></div>
+            <div class="hb-stat"><div class="hb-stat-val" id="hbAmt">$0</div><div class="hb-stat-lbl">金額</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            輪盤懲罰
+          </div>
+          <button class="btn btn-o btn-sm" onclick="spinWheel()">轉動</button>
+        </div>
+        <div class="card-bd">
+          <div class="wheel-wrap">
+            <div class="wheel-rel">
+              <canvas id="wheelCanvas" width="120" height="120"></canvas>
+              <div class="wheel-ptr"></div>
+            </div>
+            <div class="wheel-result-area">
+              <div class="wheel-result-title">當前結果</div>
+              <div class="wheel-result-val" id="wheelResult">點擊轉動</div>
+              <div class="punish-chips" id="punishChips"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pet / More -->
+    <div class="page" id="p-more">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            吉祥物養成
+          </div>
+          <button class="btn btn-g btn-sm" onclick="petInfo()">升級歷程</button>
+        </div>
+        <div class="card-bd">
+          <div class="pet-wrap">
+            <div class="pet-face" id="petFace">
+              <svg class="pet-face-svg" viewBox="0 0 60 60" fill="none">
+                <circle cx="30" cy="30" r="26" fill="#1E1E24" stroke="#333" stroke-width="1.5"/>
+                <circle cx="22" cy="26" r="4" fill="#00C49A" opacity=".8"/>
+                <circle cx="38" cy="26" r="4" fill="#00C49A" opacity=".8"/>
+                <path d="M20 38 Q30 45 40 38" stroke="#00C49A" stroke-width="2" fill="none" stroke-linecap="round"/>
+                <circle cx="22" cy="25" r="1.5" fill="#fff"/>
+                <circle cx="38" cy="25" r="1.5" fill="#fff"/>
+              </svg>
+            </div>
+            <div class="pet-stats">
+              <div class="pet-name" id="petName">小財神 Lv.3</div>
+              <div class="pet-lv" id="petExp">EXP 347 / 500</div>
+              <div class="stat-row"><div class="stat-lbl">HP</div><div class="stat-track"><div class="stat-fill" id="pHP" style="width:80%;background:var(--r)"></div></div><div class="stat-val" id="pHPv">80</div></div>
+              <div class="stat-row"><div class="stat-lbl">飽食</div><div class="stat-track"><div class="stat-fill" id="pFood" style="width:55%;background:var(--y)"></div></div><div class="stat-val" id="pFoodv">55</div></div>
+              <div class="stat-row"><div class="stat-lbl">快樂</div><div class="stat-track"><div class="stat-fill" id="pHappy" style="width:70%;background:var(--t)"></div></div><div class="stat-val" id="pHappyv">70</div></div>
+            </div>
+          </div>
+          <div class="btn-row c4" style="margin-top:12px">
+            <button class="btn btn-g btn-sm" onclick="petDo('feed')">餵食</button>
+            <button class="btn btn-g btn-sm" onclick="petDo('play')">玩耍</button>
+            <button class="btn btn-g btn-sm" onclick="petDo('heal')">治療</button>
+            <button class="btn btn-t btn-sm" onclick="petDo('exp')">+EXP</button>
+          </div>
+          <div class="pet-mood" id="petMood">狀態良好，繼續互動賺更多</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            顯示開關
+          </div>
+        </div>
+        <div class="card-bd">
+          <div class="toggle-row">
+            <div class="toggle-info"><h4>QR Code</h4><p>右側二維碼顯示</p></div>
+            <label class="sw"><input type="checkbox" id="swQR" checked onchange="apiSet({qrOn:this.checked})"><div class="sw-track"></div></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info"><h4>底部跑馬燈</h4><p>大獎得主跑馬燈</p></div>
+            <label class="sw"><input type="checkbox" id="swWins" checked onchange="apiSet({winsOn:this.checked})"><div class="sw-track"></div></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Tab bar -->
+  <div class="tabbar">
+    <button class="tabitem active" id="tab-fx" onclick="go('fx',this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      特效
+    </button>
+    <button class="tabitem" id="tab-vote" onclick="go('vote',this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
+      投票
+    </button>
+    <button class="tabitem" id="tab-battle" onclick="go('battle',this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="14.5" y1="17.5" x2="3" y2="6"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="21" x2="21" y2="16"/><line x1="2" y1="3" x2="5" y2="6"/><line x1="7" y1="8" x2="9.5" y2="5.5"/></svg>
+      對戰
+    </button>
+    <button class="tabitem" id="tab-hb" onclick="go('hb',this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+      紅包
+    </button>
+    <button class="tabitem" id="tab-more" onclick="go('more',this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+      更多
+    </button>
+  </div>
+</div>
+
+<!-- Countdown overlay -->
+<div id="cd-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:99">
+  <div class="cd-big" id="cdBig">30</div>
+  <div class="cd-result" id="cdResult"></div>
+  <button class="btn btn-g" onclick="stopCD()" style="margin-top:16px">取消</button>
+</div>
+
+<!-- Toasts -->
+<div id="toasts"></div>
+
+<script>
+const WORKER = 'https://ghs-stream-api.gai1680857.workers.dev';
+const AKEY = 'ghs168888';
+
+// ── Nav ────────────────────────────────────────────────
+function go(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tabitem').forEach(t => t.classList.remove('active'));
+  document.getElementById('p-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── Worker API ─────────────────────────────────────────
+async function apiSet(updates) {
+  try {
+    const r = await fetch(WORKER + '/api/state', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Key':AKEY}, body: JSON.stringify(updates) });
+    const d = await r.json();
+    if(d.ok) toast('已更新', 'ok');
+  } catch { toast('連線失敗'); }
+}
+
+async function sendCmd(type, extra={}) {
+  try {
+    await fetch(WORKER + '/api/command', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Key':AKEY}, body: JSON.stringify({type,...extra}) });
+    toast('指令已發送', 'ok');
+  } catch { toast('發送失敗'); }
+}
+
+async function checkConn() {
+  try {
+    const r = await fetch(WORKER + '/api/health');
+    const d = await r.json();
+    if(d.ok) {
+      document.getElementById('connTxt').textContent = '已連線';
+      const st = await (await fetch(WORKER + '/api/state')).json();
+      if(st.apiActive) {
+        document.getElementById('liveStatus').className = 'sb-live';
+        document.getElementById('liveTxt').textContent = 'LIVE';
+      }
+    }
+  } catch { document.getElementById('connTxt').textContent = '離線'; }
+}
+
+// ── FX ────────────────────────────────────────────────
+const fxItems = [
+  {label:'爆炸',cmd:'burst',icon:'M13 2L3 14h9l-1 8 10-12h-9l1-8z'},
+  {label:'金幣',cmd:'coin',icon:'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 4v8m-4-4h8'},
+  {label:'煙火',cmd:'firework',icon:'M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83'},
+  {label:'閃電',cmd:'lightning',icon:'M13 2L3 14h9l-1 8 10-12h-9l1-8z'},
+  {label:'冰凍',cmd:'freeze',icon:'M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07'},
+  {label:'火焰',cmd:'fire',icon:'M12 2c0 6-8 10-8 16a8 8 0 0 0 16 0c0-6-8-10-8-16z'},
+  {label:'彩虹',cmd:'rainbow',icon:'M2 18a10 10 0 0 1 20 0M6 18a6 6 0 0 1 12 0M10 18a2 2 0 0 1 4 0'},
+  {label:'暴擊',cmd:'crit',icon:'M12 22l-4-4 4-4 4 4-4 4zM12 6L8 2l4 4 4-4-4 4zM22 12l-4 4-4-4 4-4 4 4zM2 12l4-4 4 4-4 4-4-4z'},
+];
+const cmdMap = {};
+fxItems.forEach((fx,i) => {
+  cmdMap['!'+fx.label] = i;
+  cmdMap['!'+fx.cmd] = i;
+});
+const grid = document.getElementById('fxGrid');
+fxItems.forEach((fx, i) => {
+  const d = document.createElement('div');
+  d.className = 'fx-cell'; d.id = 'fxc'+i;
+  d.innerHTML = `<svg class="fx-cell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${fx.icon}"/></svg><div class="fx-cell-label">${fx.label}</div>`;
+  d.onclick = () => { fireFx(i, fx); };
+  grid.appendChild(d);
+});
+
+function fireFx(i, fx) {
+  const c = document.getElementById('fxc'+i);
+  c.classList.add('fired'); setTimeout(() => c.classList.remove('fired'), 500);
+  sendCmd(fx.cmd);
+  document.getElementById('cmdInput').value = '';
+}
+function matchCmd(v) {
+  const k = v.trim().toLowerCase();
+  if(cmdMap[k] !== undefined) fireFx(cmdMap[k], fxItems[cmdMap[k]]);
+}
+function clearFx() { toast('特效清除', 'ok'); }
+
+// ── Vote ──────────────────────────────────────────────
+let votes = [112,75,37,25];
+const voteLabels = ['A','B','C','D'];
+const voteCols = ['var(--o)','var(--t)','var(--p)','var(--y)'];
+const voteBarsEl = document.getElementById('voteBars');
+voteLabels.forEach((l,i) => {
+  const row = document.createElement('div'); row.className = 'vote-row';
+  row.innerHTML = `<div class="vote-key" style="color:${voteCols[i]}">${l}</div><div class="vote-track"><div class="vote-fill" id="vf${i}" style="width:0%;background:${voteCols[i]}"><span id="vp${i}">0%</span></div></div><div class="vote-pct" id="vc${i}">0</div>`;
+  voteBarsEl.appendChild(row);
+});
+function updateVotes() {
+  const t = votes.reduce((a,b)=>a+b,0)||1;
+  votes.forEach((v,i) => { const p=Math.round(v/t*100); document.getElementById('vf'+i).style.width=p+'%'; document.getElementById('vp'+i).textContent=p+'%'; document.getElementById('vc'+i).textContent=v; });
+  document.getElementById('voteTotal').textContent = '總票數 ' + votes.reduce((a,b)=>a+b,0);
+}
+function simVote() { votes[Math.floor(Math.random()*4)] += Math.floor(Math.random()*8)+1; updateVotes(); }
+function resetVote() { votes=[0,0,0,0]; updateVotes(); toast('投票重置'); }
+function announceVote() { const w=voteLabels[votes.indexOf(Math.max(...votes))]; toast('結果：選項 '+w+' 勝出', 'ok'); }
+updateVotes();
+
+// Vote timer
+let vt=60; setInterval(()=>{ vt=Math.max(0,vt-1); document.getElementById('voteTimer').style.width=(vt/60*100)+'%'; },1000);
+
+// ── Poll ──────────────────────────────────────────────
+let pollVotes = [42,28,18,12];
+const pollLabels = ['神操作，太強了','還不錯，加油','普通，一般般','需要多練練'];
+const pollCols = ['var(--p)','var(--t)','var(--y)','var(--r)'];
+const pollBarsEl = document.getElementById('pollBars');
+pollLabels.forEach((l,i) => {
+  const row = document.createElement('div'); row.className = 'poll-opt';
+  row.innerHTML = `<div class="poll-lbl" title="${l}">${l}</div><div class="poll-track" onclick="votePoll(${i})"><div class="poll-fill" id="pf${i}" style="background:${pollCols[i]};width:0%"><span id="pp${i}">0%</span></div></div>`;
+  pollBarsEl.appendChild(row);
+});
+function updatePoll() {
+  const t = pollVotes.reduce((a,b)=>a+b,0)||1;
+  pollVotes.forEach((v,i) => { const p=Math.round(v/t*100); document.getElementById('pf'+i).style.width=p+'%'; document.getElementById('pp'+i).textContent=p+'%'; });
+  document.getElementById('pollTotal').textContent='點擊選項投票 · '+pollVotes.reduce((a,b)=>a+b,0)+' 票';
+}
+function votePoll(i) { pollVotes[i]+=Math.floor(Math.random()*5)+1; updatePoll(); }
+function simPoll() { votePoll(Math.floor(Math.random()*4)); }
+function resetPoll() { pollVotes=[0,0,0,0]; updatePoll(); }
+updatePoll();
+
+// ── Battle ────────────────────────────────────────────
+let hpH=85, hpA=72;
+function syncBattle() {
+  hpH=Math.max(0,Math.min(100,hpH)); hpA=Math.max(0,Math.min(100,hpA));
+  document.getElementById('hpHost').textContent=hpH; document.getElementById('hpAud').textContent=hpA;
+  document.getElementById('hpHostBar').style.width=hpH+'%'; document.getElementById('hpAudBar').style.width=hpA+'%';
+}
+function logBattle(msg, cls='') {
+  const el=document.getElementById('battleLog');
+  const d=document.createElement('div'); d.className='log '+cls; d.textContent=msg;
+  el.appendChild(d); el.scrollTop=el.scrollHeight;
+}
+function attack(name,min,max) {
+  const crit=Math.random()<.2; const dmg=crit?Math.round(max*1.5):Math.floor(Math.random()*(max-min))+min;
+  hpH-=Math.round(dmg*.4); hpA-=Math.round(dmg*.6); syncBattle();
+  logBattle((crit?'暴擊！ ':'') + name + ' → 各扣 '+Math.round(dmg*.4)+'/'+Math.round(dmg*.6)+' HP', crit?'crit':'hit');
+  if(hpH<=0||hpA<=0){ logBattle((hpH<=0?'觀眾':'主播')+' 勝利！', 'info'); toast((hpH<=0?'觀眾':'主播')+' 勝利', 'ok'); }
+}
+function heal() { hpH=Math.min(100,hpH+20); syncBattle(); logBattle('治療 +20 HP', 'info'); }
+function resetBattle() { hpH=100; hpA=100; syncBattle(); document.getElementById('battleLog').innerHTML='<div class="log info">新對戰開始</div>'; }
+
+// ── Countdown ─────────────────────────────────────────
+let cdTimer=null, cdN=0;
+function startCD() {
+  cdN=parseInt(document.getElementById('cdSec').value);
+  const overlay=document.getElementById('cd-overlay'); overlay.style.display='flex';
+  document.getElementById('cdResult').textContent='';
+  const tick=()=>{
+    document.getElementById('cdBig').textContent=cdN; document.getElementById('cdDisplay').textContent=cdN;
+    if(cdN<=0){ clearInterval(cdTimer); document.getElementById('cdBig').textContent='START'; document.getElementById('cdResult').textContent=document.getElementById('cdMsg').value; setTimeout(()=>{ overlay.style.display='none'; document.getElementById('cdDisplay').textContent='--'; },3000); return; }
+    cdN--;
+  };
+  tick(); cdTimer=setInterval(tick,1000);
+}
+function stopCD() { clearInterval(cdTimer); document.getElementById('cd-overlay').style.display='none'; document.getElementById('cdDisplay').textContent='--'; }
+
+// ── Hongbao ───────────────────────────────────────────
+let hbInterval=null, hbTotal=0, hbGrab=0;
+function startHB() {
+  document.getElementById('hbHint').style.display='none';
+  hbTotal=20; hbGrab=0; syncHB();
+  for(let i=0;i<6;i++) spawnHB();
+  hbInterval=setInterval(()=>{ if(document.querySelectorAll('.hb-packet').length<5) spawnHB(); },700);
+  toast('紅包雨開始', 'warn');
+}
+function spawnHB() {
+  const s=document.getElementById('hbStage');
+  const p=document.createElement('div'); p.className='hb-packet';
+  p.style.left=Math.random()*75+5+'%';
+  p.style.setProperty('--d',(2+Math.random()*2)+'s');
+  p.style.animationDelay=Math.random()+'s';
+  s.appendChild(p); setTimeout(()=>p.remove&&p.remove(),4500);
+}
+function grabHB() {
+  const ps=document.querySelectorAll('.hb-packet'); if(!ps.length) return;
+  const p=ps[Math.floor(Math.random()*ps.length)]; p.remove();
+  hbGrab++; syncHB(); toast('搶到 $'+(Math.floor(Math.random()*50)+10), 'ok');
+}
+function stopHB() { clearInterval(hbInterval); document.querySelectorAll('.hb-packet').forEach(p=>p.remove()); }
+function syncHB() {
+  document.getElementById('hbTotal').textContent=hbTotal;
+  document.getElementById('hbGrab').textContent=hbGrab;
+  document.getElementById('hbLeft').textContent=Math.max(0,hbTotal-hbGrab);
+  document.getElementById('hbAmt').textContent='$'+hbTotal*10;
+}
+
+// ── Wheel ─────────────────────────────────────────────
+const punishments = ['唱一句歌','學狗叫','說冷笑話','伏地挺身 10 下','模仿明星','說繞口令','喝水 30 秒','奇怪聲音播報'];
+const wheelCols = ['#FF6B35','#00C49A','#7F77DD','#FAC775','#E24B4A','#1D9E75','#534AB7','#BA7517'];
+let wAngle=0, wSpin=false;
+function drawWheel(a) {
+  const cv=document.getElementById('wheelCanvas'), ctx=cv.getContext('2d');
+  const n=punishments.length, r=58, cx=60, cy=60;
+  ctx.clearRect(0,0,120,120);
+  for(let i=0;i<n;i++){
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,a+i*2*Math.PI/n,a+(i+1)*2*Math.PI/n); ctx.fillStyle=wheelCols[i]; ctx.fill();
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(a+(i+.5)*2*Math.PI/n);
+    ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font='bold 7px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(punishments[i].slice(0,5),r*.55,3); ctx.restore();
+  }
+  ctx.beginPath(); ctx.arc(cx,cy,10,0,2*Math.PI); ctx.fillStyle='#111'; ctx.fill();
+}
+function spinWheel() {
+  if(wSpin) return; wSpin=true;
+  const target=wAngle+Math.PI*6+Math.random()*Math.PI*2, from=wAngle, start=Date.now(), dur=3000;
+  const go=()=>{
+    const t=(Date.now()-start)/dur; if(t>=1){ wAngle=target%(2*Math.PI); drawWheel(wAngle); const idx=Math.floor(((2*Math.PI-wAngle)/(2*Math.PI))*n)%n; document.getElementById('wheelResult').textContent=punishments[idx]; toast(punishments[idx],'warn'); wSpin=false; return; }
+    wAngle=from+(target-from)*(1-Math.pow(1-t,3)); drawWheel(wAngle); requestAnimationFrame(go);
+  }; go();
+}
+const n=punishments.length;
+const chips=document.getElementById('punishChips');
+punishments.slice(0,4).forEach(p=>{ const c=document.createElement('div'); c.className='punish-chip'; c.textContent=p; chips.appendChild(c); });
+drawWheel(0);
+
+// ── Pet ───────────────────────────────────────────────
+let pet={hp:80,food:55,happy:70,exp:347,lv:3};
+function syncPet() {
+  document.getElementById('petName').textContent='小財神 Lv.'+pet.lv;
+  document.getElementById('petExp').textContent='EXP '+pet.exp+' / '+(pet.lv*200-100);
+  document.getElementById('pHP').style.width=pet.hp+'%'; document.getElementById('pHPv').textContent=pet.hp;
+  document.getElementById('pFood').style.width=pet.food+'%'; document.getElementById('pFoodv').textContent=pet.food;
+  document.getElementById('pHappy').style.width=pet.happy+'%'; document.getElementById('pHappyv').textContent=pet.happy;
+  const moods=['狀態不佳，需要關心','狀態一般','狀態良好，繼續互動','超級快樂，財運大旺'];
+  document.getElementById('petMood').textContent=moods[Math.min(3,Math.floor(pet.happy/30))];
+}
+function petDo(t) {
+  if(t==='feed'){pet.food=Math.min(100,pet.food+20);pet.exp+=10;toast('餵食 +10 EXP','ok')}
+  else if(t==='play'){pet.happy=Math.min(100,pet.happy+15);pet.food=Math.max(0,pet.food-10);pet.exp+=15;toast('玩耍 +15 EXP','ok')}
+  else if(t==='heal'){pet.hp=Math.min(100,pet.hp+30);pet.exp+=5;toast('治療完成','ok')}
+  else{pet.exp+=50;toast('+50 EXP','ok')}
+  const max=pet.lv*200-100; if(pet.exp>=max){pet.lv++;pet.exp=0;toast('升級！Lv.'+pet.lv,'ok');}
+  syncPet();
+}
+function petInfo(){toast('Lv1 蛋 → Lv2 破殼 → Lv3 神龍 → Lv4 火龍');}
+syncPet();
+
+// ── Toast ─────────────────────────────────────────────
+function toast(msg, type='') {
+  const el=document.createElement('div'); el.className='toast '+(type==='ok'?'ok':type==='warn'?'warn':'');
+  el.textContent=msg; document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(),2500);
+}
+
+// ── Init ──────────────────────────────────────────────
+checkConn();
+setInterval(()=>{ if(Math.random()>.75) simVote(); if(Math.random()>.88) simPoll(); },3000);
+</script>
+</body>
+</html>
