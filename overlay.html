@@ -176,9 +176,9 @@ body::after{content:'';position:fixed;inset:0;z-index:9989;pointer-events:none;b
 .poll-label{font-size:14px;color:rgba(255,255,255,0.6);min-width:20px}
 
 /* === CONTROL TOGGLE BUTTON === */
-.ctrl-toggle{position:fixed;left:0;bottom:0;z-index:99999;width:52px;height:52px;background:rgba(15,15,15,0.92);backdrop-filter:blur(8px);border:2px solid rgba(255,215,0,0.5);border-radius:0 14px 0 0;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:22px;transition:all 0.2s;box-shadow:2px -2px 12px rgba(255,215,0,0.15)}
-.ctrl-toggle:hover{background:rgba(255,215,0,0.2)}
-.ctrl-panel{position:fixed;left:0;bottom:0;z-index:99998;background:rgba(0,0,0,0.92);backdrop-filter:blur(20px);border:2px solid rgba(255,215,0,0.3);border-radius:0 20px 0 0;padding:20px 24px 28px;transform:translateX(-110%);transition:transform 0.3s ease;display:flex;flex-direction:column;gap:10px;max-height:85vh;overflow-y:auto}
+.ctrl-toggle{position:absolute;left:0;bottom:42px;z-index:99999;width:56px;height:56px;background:rgba(15,15,15,0.95);border:2px solid rgba(255,215,0,0.6);border-radius:0 16px 0 0;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:24px;transition:all 0.2s;box-shadow:4px -4px 20px rgba(255,215,0,0.2)}
+.ctrl-toggle:hover{background:rgba(255,215,0,0.25);box-shadow:4px -4px 28px rgba(255,215,0,0.4)}
+.ctrl-panel{position:absolute;left:0;bottom:42px;z-index:99998;background:rgba(0,0,0,0.95);backdrop-filter:blur(20px);border:2px solid rgba(255,215,0,0.3);border-radius:0 20px 0 0;padding:20px 24px 28px;transform:translateX(-110%);transition:transform 0.3s ease;display:flex;flex-direction:column;gap:10px;max-height:600px;overflow-y:auto}
 .ctrl-panel.open{transform:translateX(0)}
 .ctrl-title{font-family:'Orbitron';font-size:14px;color:var(--g1);letter-spacing:3px;padding-bottom:8px;border-bottom:1px solid rgba(255,215,0,0.15)}
 .ctrl-row{display:flex;align-items:center;gap:12px;min-width:340px;flex-wrap:wrap}
@@ -534,6 +534,11 @@ function triggerRedEnvelope() {
 }
 
 /* ─── CONTROL PANEL TOGGLE ─── */
+// Keyboard shortcut: ` (backtick) to toggle control panel
+document.addEventListener('keydown', function(e) {
+  if (e.key === '`' || e.key === '~') toggleCtrl();
+});
+
 function toggleCtrl() {
   var p = document.getElementById('ctrlPanel');
   p.classList.toggle('open');
