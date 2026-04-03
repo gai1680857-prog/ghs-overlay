@@ -2,180 +2,221 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>GHS 直播控制台</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--g:#FFD700;--g2:#FFA500;--r:#FF4757;--t:#00D4AA;--p:#8B5CF6;--bg:#08080A;--card:rgba(255,255,255,0.04);--border:rgba(255,215,0,0.15)}
-body{background:var(--bg);color:#fff;font-family:'Noto Sans TC','Segoe UI',sans-serif;min-height:100vh;padding:16px}
-h1{font-size:20px;font-weight:900;color:var(--g);letter-spacing:2px;margin-bottom:16px;display:flex;align-items:center;gap:10px}
-h1 span{font-size:11px;color:rgba(255,255,255,0.3);font-weight:400;letter-spacing:1px}
-.status{font-size:11px;padding:2px 10px;border-radius:20px;background:rgba(0,212,170,0.15);color:var(--t);border:1px solid rgba(0,212,170,0.3)}
-.status.err{background:rgba(255,71,87,0.15);color:var(--r);border-color:rgba(255,71,87,0.3)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--g:#FFD700;--g2:#FFA500;--r:#FF4757;--t:#00D4AA;--p:#8B5CF6;--bg:#0A0A0C;--card:#131317;--border:rgba(255,215,0,0.12)}
+html,body{height:100%;background:var(--bg);color:#fff;font-family:'Noto Sans TC','Segoe UI',sans-serif;overflow:hidden}
 
-/* Setup modal */
-#setup{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:999}
-#setup.hide{display:none}
-.setup-box{background:#111;border:1px solid var(--border);border-radius:16px;padding:32px;width:min(440px,90vw)}
-.setup-box h2{color:var(--g);margin-bottom:20px;font-size:18px}
-.setup-box p{color:rgba(255,255,255,0.5);font-size:13px;margin-bottom:20px;line-height:1.6}
+/* ── Header ── */
+.hdr{display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.hdr-title{font-size:18px;font-weight:900;color:var(--g);letter-spacing:1px;flex:1}
+.hdr-live{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:rgba(255,71,87,0.15);color:var(--r);border:1px solid rgba(255,71,87,0.3)}
+.hdr-live.off{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.3);border-color:rgba(255,255,255,0.08)}
+.hdr-dot{width:7px;height:7px;border-radius:50%;background:var(--r);animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.hdr-live.off .hdr-dot{animation:none;background:rgba(255,255,255,0.2)}
+.conn{font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(0,212,170,0.12);color:var(--t);border:1px solid rgba(0,212,170,0.25)}
+.conn.err{background:rgba(255,71,87,0.12);color:var(--r);border-color:rgba(255,71,87,0.25)}
 
-/* Grid layout */
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
-.card-title{font-size:11px;color:rgba(255,215,0,0.5);letter-spacing:2px;font-weight:700;margin-bottom:12px;text-transform:uppercase}
+/* ── Layout ── */
+.layout{display:flex;flex-direction:column;height:100%}
+.content{flex:1;overflow-y:auto;padding:14px 16px;display:none}
+.content.active{display:block}
 
-/* Inputs */
-input,select{width:100%;padding:8px 12px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#fff;font-size:14px;outline:none;transition:.2s}
-input:focus,select:focus{border-color:var(--g)}
-select option{background:#111}
-.row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
-.row label{font-size:13px;color:rgba(255,255,255,0.6);width:80px;flex-shrink:0}
-.row input,.row select{flex:1}
+/* ── Tab bar ── */
+.tabs{display:flex;border-top:1px solid var(--border);flex-shrink:0}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 4px;cursor:pointer;font-size:10px;color:rgba(255,255,255,0.35);transition:.15s;border:none;background:none}
+.tab.active{color:var(--g)}
+.tab-icon{font-size:20px;line-height:1}
 
-/* Buttons */
-button{padding:8px 16px;border-radius:8px;border:1px solid rgba(255,215,0,0.3);background:rgba(255,215,0,0.1);color:var(--g);font-size:13px;cursor:pointer;transition:.15s;white-space:nowrap}
-button:hover{background:rgba(255,215,0,0.25);border-color:var(--g)}
-button:active{transform:scale(0.97)}
-button.on{background:rgba(0,212,170,0.2);border-color:var(--t);color:var(--t)}
-button.off{background:rgba(255,71,87,0.15);border-color:rgba(255,71,87,0.3);color:var(--r)}
-button.red{background:rgba(255,71,87,0.2);border-color:rgba(255,71,87,0.5);color:var(--r)}
-button.red:hover{background:rgba(255,71,87,0.4)}
-button.full{width:100%;padding:10px}
-button.sm{padding:6px 12px;font-size:12px}
+/* ── Card ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px}
+.card-title{font-size:10px;color:rgba(255,215,0,0.4);letter-spacing:2px;font-weight:700;text-transform:uppercase;margin-bottom:14px}
 
-/* Energy slider */
-.slider{width:100%;margin:8px 0;accent-color:var(--g)}
-.energy-display{font-family:monospace;font-size:28px;font-weight:900;color:var(--g);text-align:center;margin:8px 0}
-.btn-row{display:flex;gap:6px;flex-wrap:wrap}
-.btn-row button{flex:1;min-width:0}
+/* ── Inputs ── */
+input,select{width:100%;padding:11px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#fff;font-size:15px;outline:none;transition:.2s;font-family:inherit}
+input:focus,select:focus{border-color:var(--g);background:rgba(255,215,0,0.05)}
+select option{background:#1a1a1f}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:12px;color:rgba(255,255,255,0.45);margin-bottom:6px}
 
-/* Alert builder */
-.alert-row{display:grid;grid-template-columns:1fr 1fr 80px;gap:8px;margin-bottom:8px}
+/* ── Buttons ── */
+.btn{display:block;width:100%;padding:13px;border-radius:10px;border:1px solid rgba(255,215,0,0.25);background:rgba(255,215,0,0.08);color:var(--g);font-size:15px;font-weight:700;cursor:pointer;transition:.15s;font-family:inherit;text-align:center}
+.btn:active{transform:scale(0.97);opacity:.85}
+.btn.primary{background:linear-gradient(135deg,var(--g2),var(--g));color:#000;border-color:transparent}
+.btn.danger{background:rgba(255,71,87,0.15);border-color:rgba(255,71,87,0.3);color:var(--r)}
+.btn.danger.active-state{background:rgba(255,71,87,0.3);border-color:var(--r)}
+.btn.teal{background:rgba(0,212,170,0.15);border-color:rgba(0,212,170,0.3);color:var(--t)}
+.btn.sm{padding:9px 14px;font-size:13px}
+.btn-row{display:grid;gap:8px;margin-bottom:8px}
+.btn-row.col2{grid-template-columns:1fr 1fr}
+.btn-row.col3{grid-template-columns:1fr 1fr 1fr}
+.btn-row.col5{grid-template-columns:repeat(5,1fr)}
 
-/* Toast */
-#toast{position:fixed;bottom:24px;right:24px;padding:10px 20px;background:var(--t);color:#000;border-radius:8px;font-size:13px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999}
-#toast.show{opacity:1}
+/* ── Energy ── */
+.energy-num{font-size:52px;font-weight:900;color:var(--g);text-align:center;line-height:1;margin:8px 0}
+.energy-bar{height:12px;background:rgba(255,255,255,0.08);border-radius:6px;overflow:hidden;margin:10px 0 14px}
+.energy-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--g2),var(--g));transition:width .5s ease}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--g);border:3px solid #000;margin-top:-12px}
+input[type=range]::-webkit-slider-runnable-track{height:6px;background:rgba(255,255,255,0.1);border-radius:3px}
+
+/* ── Toggle switch ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-label{font-size:15px}
+.toggle-sub{font-size:12px;color:rgba(255,255,255,0.3);margin-top:2px}
+.switch{position:relative;width:50px;height:28px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.switch-track{position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:28px;transition:.2s;cursor:pointer}
+.switch input:checked+.switch-track{background:var(--t)}
+.switch-track::after{content:'';position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s}
+.switch input:checked+.switch-track::after{transform:translateX(22px)}
+
+/* ── Alert builder ── */
+.alert-types{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.atype{padding:10px 4px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);font-size:13px;cursor:pointer;transition:.15s;text-align:center}
+.atype.sel{border-color:var(--g);background:rgba(255,215,0,0.1);color:var(--g);font-weight:700}
+
+/* ── Page list ── */
+.page-item{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.1);border-radius:10px;margin-bottom:8px}
+.page-id{font-family:monospace;font-size:13px;color:var(--g);background:rgba(255,215,0,0.1);padding:2px 8px;border-radius:6px}
+.page-name{flex:1;font-size:14px}
+.page-ok{font-size:11px;color:var(--t)}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);padding:11px 24px;background:var(--t);color:#000;border-radius:30px;font-size:14px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;z-index:9999;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.err{background:var(--r);color:#fff}
 
-/* Mobile */
-@media(max-width:600px){
-  body{padding:10px}
-  .grid{grid-template-columns:1fr}
-  .alert-row{grid-template-columns:1fr 1fr}
-}
+/* scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,215,0,0.15);border-radius:2px}
 </style>
 </head>
 <body>
 
-<div id="setup">
-  <div class="setup-box">
-    <h2>GHS 直播控制台設定</h2>
-    <p>第一次使用需要設定 Worker 網址與管理密鑰，之後會記住。</p>
-    <div class="row" style="margin-bottom:12px">
-      <label>Worker URL</label>
-      <input id="sUrl" value="https://ghs-stream-api.gai1680857.workers.dev" placeholder="Worker 網址">
-    </div>
-    <div class="row" style="margin-bottom:20px">
-      <label>Admin Key</label>
-      <input id="sKey" type="password" placeholder="你的 ADMIN_KEY">
-    </div>
-    <button class="full" onclick="saveSetup()">儲存並進入</button>
-  </div>
-</div>
+<div class="layout">
 
-<h1>GHS 直播控制台 <span id="connStatus" class="status">連線中...</span></h1>
-
-<div class="grid">
-
-  <!-- API 串接 -->
-  <div class="card">
-    <div class="card-title">Live API 串接</div>
-    <div class="row"><label>FB 粉專</label><select id="fbPage"><option value="">── 選粉專 ──</option></select></div>
-    <div class="row"><label>FB Video ID</label><input id="fbVideoId" placeholder="開播後貼入 Video ID"></div>
-    <div class="row"><label>Twitch</label><input id="twChannel" placeholder="頻道名稱（小寫）"></div>
-    <div class="btn-row" style="margin-top:4px">
-      <button id="apiBtn" class="full" onclick="toggleApi()">啟動 API</button>
-    </div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.25);margin-top:8px">啟動後 overlay 自動切換真實資料</div>
-  </div>
-
-  <!-- 能量條 -->
-  <div class="card">
-    <div class="card-title">能量條</div>
-    <div class="energy-display" id="energyDisplay">0%</div>
-    <input type="range" class="slider" id="energySlider" min="0" max="100" value="0" oninput="onEnergySlider(this.value)">
-    <div class="btn-row">
-      <button class="sm" onclick="adjustEnergy(-10)">-10</button>
-      <button class="sm" onclick="adjustEnergy(10)">+10</button>
-      <button class="sm" onclick="setEnergy(50)">50%</button>
-      <button class="sm" onclick="setEnergy(100)">MAX</button>
-      <button class="sm" onclick="setEnergy(0)">清零</button>
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-title">GHS 控制台</div>
+    <span id="connStatus" class="conn">連線中</span>
+    <div id="liveBtn" class="hdr-live off" onclick="toggleApi()">
+      <div class="hdr-dot"></div>
+      <span id="liveTxt">OFF</span>
     </div>
   </div>
 
-  <!-- 遊戲名稱 -->
-  <div class="card">
-    <div class="card-title">遊戲名稱</div>
-    <div class="row"><label>名稱</label><input id="gameName" placeholder="Fortune Tiger" value="Fortune Tiger"></div>
-    <button class="full" style="margin-top:4px" onclick="setGameName()">套用</button>
-  </div>
+  <!-- Tab: 直播 -->
+  <div class="content active" id="tab-live">
+    <div class="card">
+      <div class="card-title">直播設定</div>
+      <div class="field"><label>FB 粉專</label><select id="fbPage"><option value="">── 選粉專 ──</option></select></div>
+      <div class="field"><label>FB Video ID</label><input id="fbVideoId" placeholder="開播後貼入"></div>
+      <div class="field"><label>Twitch 頻道</label><input id="twChannel" placeholder="gai168"></div>
+      <button class="btn primary" id="apiBtn" onclick="toggleApi()">▶ 啟動直播 API</button>
+    </div>
 
-  <!-- 倒計時 -->
-  <div class="card">
-    <div class="card-title">倒計時</div>
-    <div class="row"><label>分鐘</label><input id="cdMin" type="number" value="30" min="1" max="999"></div>
-    <div class="row"><label>事件名</label><input id="cdLabel" value="紅包雨倒計時"></div>
-    <div class="btn-row" style="margin-top:4px">
-      <button id="cdBtn" class="off" onclick="toggleCountdown()">倒計時 OFF</button>
+    <div class="card">
+      <div class="card-title">遊戲名稱</div>
+      <div class="field"><input id="gameName" placeholder="Fortune Tiger"></div>
+      <button class="btn" onclick="setGameName()">套用</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">倒計時</div>
+      <div class="btn-row col2" style="margin-bottom:10px">
+        <div class="field" style="margin:0"><label>分鐘</label><input id="cdMin" type="number" value="30" min="1"></div>
+        <div class="field" style="margin:0"><label>事件名</label><input id="cdLabel" value="紅包雨倒計時"></div>
+      </div>
+      <button class="btn" id="cdBtn" onclick="toggleCountdown()">倒計時 OFF</button>
     </div>
   </div>
 
-  <!-- 特效 -->
-  <div class="card">
-    <div class="card-title">特效觸發</div>
-    <div class="btn-row">
-      <button class="red full" onclick="fireCommand({type:'redEnvelope'})">紅包雨</button>
-      <button class="red full" onclick="fireCommand({type:'redEnvelope'});setTimeout(()=>fireCommand({type:'redEnvelope'}),800)">紅包雨 x2</button>
+  <!-- Tab: 特效 -->
+  <div class="content" id="tab-fx">
+    <div class="card">
+      <div class="card-title">紅包雨</div>
+      <div class="btn-row col2">
+        <button class="btn danger" onclick="fireCommand({type:'redEnvelope'})">🧧 紅包雨</button>
+        <button class="btn danger" onclick="fireCommand({type:'redEnvelope'});setTimeout(()=>fireCommand({type:'redEnvelope'}),600)">🧧🧧 x2</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">手動 Alert</div>
+      <div class="alert-types" id="alertTypes">
+        <div class="atype sel" data-v="follow" onclick="selAlert(this)">追蹤</div>
+        <div class="atype" data-v="sub" onclick="selAlert(this)">訂閱</div>
+        <div class="atype" data-v="tip" onclick="selAlert(this)">打賞</div>
+        <div class="atype" data-v="share" onclick="selAlert(this)">分享</div>
+      </div>
+      <div class="field"><label>用戶名</label><input id="aUser" placeholder="Player"></div>
+      <div class="field"><label>金額（選填）</label><input id="aAmt" placeholder="100"></div>
+      <button class="btn primary" onclick="sendAlert()">發送</button>
     </div>
   </div>
 
-  <!-- 手動 Alert -->
-  <div class="card">
-    <div class="card-title">手動 Alert</div>
-    <div class="alert-row">
-      <select id="aType">
-        <option value="follow">追蹤</option>
-        <option value="sub">訂閱</option>
-        <option value="tip">打賞</option>
-        <option value="share">分享</option>
-      </select>
-      <input id="aUser" placeholder="用戶名">
-      <input id="aAmt" placeholder="金額">
-    </div>
-    <button class="full" onclick="sendAlert()">發送 Alert</button>
-  </div>
-
-  <!-- 顯示開關 -->
-  <div class="card">
-    <div class="card-title">顯示開關</div>
-    <div class="btn-row">
-      <button id="qrBtn" class="on" onclick="toggle('qrOn','qrBtn','QR Code')">QR Code ON</button>
-      <button id="winsBtn" class="on" onclick="toggle('winsOn','winsBtn','跑馬燈')">跑馬燈 ON</button>
+  <!-- Tab: 能量 -->
+  <div class="content" id="tab-energy">
+    <div class="card">
+      <div class="card-title">能量條</div>
+      <div class="energy-num" id="energyDisplay">0%</div>
+      <div class="energy-bar"><div class="energy-fill" id="energyFill" style="width:0%"></div></div>
+      <input type="range" id="energySlider" min="0" max="100" value="0" oninput="onSlider(this.value)" onchange="setEnergy(parseInt(this.value))">
+      <div class="btn-row col5" style="margin-top:8px">
+        <button class="btn sm" onclick="adjustEnergy(-20)">-20</button>
+        <button class="btn sm" onclick="adjustEnergy(-10)">-10</button>
+        <button class="btn sm" onclick="adjustEnergy(10)">+10</button>
+        <button class="btn sm" onclick="adjustEnergy(20)">+20</button>
+        <button class="btn sm" onclick="setEnergy(0)">清零</button>
+      </div>
+      <div class="btn-row col2" style="margin-top:8px">
+        <button class="btn" onclick="setEnergy(50)">50%</button>
+        <button class="btn primary" onclick="setEnergy(100)">MAX 🎉</button>
+      </div>
     </div>
   </div>
 
-  <!-- FB 粉專管理 -->
-  <div class="card" style="grid-column:1/-1">
-    <div class="card-title">FB 粉專 Token 設定</div>
-    <div id="pageList" style="margin-bottom:10px;display:flex;flex-direction:column;gap:6px"></div>
-    <div style="display:grid;grid-template-columns:80px 160px 1fr auto;gap:8px;align-items:center">
-      <input id="pId" placeholder="p1~p5" style="text-align:center">
-      <input id="pName" placeholder="粉專名稱（如蓋厚勝主號）">
-      <input id="pToken" placeholder="Page Access Token（EAA...）" type="password">
-      <button onclick="addPage()" style="white-space:nowrap">新增 / 更新</button>
+  <!-- Tab: 開關 -->
+  <div class="content" id="tab-toggle">
+    <div class="card">
+      <div class="card-title">顯示元素</div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">QR Code</div><div class="toggle-sub">右側 QR 碼顯示</div></div>
+        <label class="switch"><input type="checkbox" id="swQr" checked onchange="setState({qrOn:this.checked})"><div class="switch-track"></div></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">跑馬燈</div><div class="toggle-sub">底部大獎跑馬燈</div></div>
+        <label class="switch"><input type="checkbox" id="swWins" checked onchange="setState({winsOn:this.checked})"><div class="switch-track"></div></label>
+      </div>
     </div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.2);margin-top:8px">Token 存在 Worker KV，不會外露。需要長期 Token 請用 Graph API Explorer 換。</div>
+  </div>
+
+  <!-- Tab: 設定 -->
+  <div class="content" id="tab-setting">
+    <div class="card">
+      <div class="card-title">FB 粉專 Token</div>
+      <div id="pageList" style="margin-bottom:12px"></div>
+      <div class="field"><label>ID（p1~p5）</label><input id="pId" placeholder="p1"></div>
+      <div class="field"><label>粉專名稱</label><input id="pName" placeholder="蓋厚勝主號"></div>
+      <div class="field"><label>Page Access Token</label><input id="pToken" type="password" placeholder="EAA..."></div>
+      <button class="btn primary" onclick="addPage()">新增 / 更新</button>
+      <div style="font-size:11px;color:rgba(255,255,255,0.2);margin-top:10px;text-align:center">Token 存在 Worker KV，不外露</div>
+    </div>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('live',this)"><div class="tab-icon">📡</div>直播</button>
+    <button class="tab" onclick="switchTab('fx',this)"><div class="tab-icon">🎆</div>特效</button>
+    <button class="tab" onclick="switchTab('energy',this)"><div class="tab-icon">⚡</div>能量</button>
+    <button class="tab" onclick="switchTab('toggle',this)"><div class="tab-icon">🔲</div>開關</button>
+    <button class="tab" onclick="switchTab('setting',this)"><div class="tab-icon">⚙️</div>設定</button>
   </div>
 
 </div>
@@ -186,182 +227,133 @@ button.sm{padding:6px 12px;font-size:12px}
 const WORKER = () => 'https://ghs-stream-api.gai1680857.workers.dev';
 const AKEY = () => 'ghs168888';
 
-let state = {};
-let apiActive = false;
+let state = {}, pages = [], apiActive = false;
+let selectedAlert = 'follow';
 
-// ─── Setup ───────────────────────────────────────────────
-function saveSetup() {
-  const url = document.getElementById('sUrl').value.trim().replace(/\/$/, '');
-  const key = document.getElementById('sKey').value.trim();
-  if (!url || !key) return toast('請填入 Worker URL 和 Admin Key', true);
-  localStorage.setItem('ghs_worker', url);
-  localStorage.setItem('ghs_key', key);
-  document.getElementById('setup').classList.add('hide');
-  init();
+// ── Tab ──────────────────────────────────────────────────
+function switchTab(id, el) {
+  document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  el.classList.add('active');
 }
 
-function resetSetup() {
-  localStorage.removeItem('ghs_worker');
-  localStorage.removeItem('ghs_key');
-  location.reload();
+// ── Alert type selector ───────────────────────────────────
+function selAlert(el) {
+  document.querySelectorAll('.atype').forEach(a => a.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedAlert = el.dataset.v;
 }
 
-// ─── API helpers ─────────────────────────────────────────
+// ── API helpers ───────────────────────────────────────────
 async function api(path, method = 'GET', body = null) {
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': AKEY() }
-  };
+  const opts = { method, headers: { 'Content-Type': 'application/json', 'X-Admin-Key': AKEY() } };
   if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(WORKER() + path, opts);
-  return res.json();
+  return (await fetch(WORKER() + path, opts)).json();
 }
 
 async function setState(updates) {
   try {
     const r = await api('/api/state', 'POST', updates);
-    if (r.ok) { Object.assign(state, updates); updateUI(); toast('已更新'); }
+    if (r.ok) { Object.assign(state, updates); applyUI(); toast('已更新'); }
     else toast(r.error || '失敗', true);
-  } catch (e) { toast('連線失敗', true); }
+  } catch { toast('連線失敗', true); }
 }
 
 async function fireCommand(cmd) {
-  try {
-    await api('/api/command', 'POST', cmd);
-    toast('指令已發送');
-  } catch { toast('發送失敗', true); }
+  try { await api('/api/command', 'POST', cmd); toast('發送成功'); }
+  catch { toast('失敗', true); }
 }
 
-// ─── State sync ──────────────────────────────────────────
+// ── State sync ────────────────────────────────────────────
 async function fetchState() {
   try {
-    const r = await fetch(WORKER() + '/api/state');
-    state = await r.json();
-    updateUI();
+    state = await (await fetch(WORKER() + '/api/state')).json();
+    applyUI();
     document.getElementById('connStatus').textContent = '已連線';
-    document.getElementById('connStatus').className = 'status';
+    document.getElementById('connStatus').className = 'conn';
   } catch {
-    document.getElementById('connStatus').textContent = '連線失敗';
-    document.getElementById('connStatus').className = 'status err';
+    document.getElementById('connStatus').textContent = '離線';
+    document.getElementById('connStatus').className = 'conn err';
   }
 }
 
-function updateUI() {
+function applyUI() {
   // Energy
   const e = state.energy || 0;
   document.getElementById('energyDisplay').textContent = e + '%';
   document.getElementById('energySlider').value = e;
+  document.getElementById('energyFill').style.width = e + '%';
 
   // Game
   if (state.gameName) document.getElementById('gameName').value = state.gameName;
 
   // Countdown
   const cdBtn = document.getElementById('cdBtn');
-  if (state.countdownOn) {
-    cdBtn.textContent = '倒計時 ON';
-    cdBtn.className = 'on';
-  } else {
-    cdBtn.textContent = '倒計時 OFF';
-    cdBtn.className = 'off';
-  }
+  cdBtn.textContent = state.countdownOn ? '⏱ 倒計時 ON' : '倒計時 OFF';
+  cdBtn.className = state.countdownOn ? 'btn teal' : 'btn';
 
   // API
-  apiActive = state.apiActive || false;
-  const apiBtn = document.getElementById('apiBtn');
+  apiActive = !!state.apiActive;
+  const btn = document.getElementById('apiBtn');
+  const liveBtn = document.getElementById('liveBtn');
   if (apiActive) {
-    apiBtn.textContent = '停止 API';
-    apiBtn.className = 'full red';
+    btn.textContent = '⏹ 停止直播 API';
+    btn.className = 'btn danger active-state';
+    liveBtn.className = 'hdr-live';
+    document.getElementById('liveTxt').textContent = 'LIVE';
   } else {
-    apiBtn.textContent = '啟動 API';
-    apiBtn.className = 'full';
+    btn.textContent = '▶ 啟動直播 API';
+    btn.className = 'btn primary';
+    liveBtn.className = 'hdr-live off';
+    document.getElementById('liveTxt').textContent = 'OFF';
   }
   if (state.fbPage) document.getElementById('fbPage').value = state.fbPage;
   if (state.fbVideoId) document.getElementById('fbVideoId').value = state.fbVideoId;
   if (state.twChannel) document.getElementById('twChannel').value = state.twChannel;
 
   // Toggles
-  setToggleBtn('qrBtn', state.qrOn !== false, 'QR Code');
-  setToggleBtn('winsBtn', state.winsOn !== false, '跑馬燈');
+  if (state.qrOn !== undefined) document.getElementById('swQr').checked = state.qrOn !== false;
+  if (state.winsOn !== undefined) document.getElementById('swWins').checked = state.winsOn !== false;
 }
 
-function setToggleBtn(id, on, label) {
-  const btn = document.getElementById(id);
-  btn.textContent = label + (on ? ' ON' : ' OFF');
-  btn.className = on ? 'on' : 'off';
+// ── Controls ──────────────────────────────────────────────
+function onSlider(v) {
+  document.getElementById('energyDisplay').textContent = v + '%';
+  document.getElementById('energyFill').style.width = v + '%';
 }
-
-// ─── Controls ─────────────────────────────────────────────
-let energyLocal = 0;
-function onEnergySlider(v) {
-  energyLocal = parseInt(v);
-  document.getElementById('energyDisplay').textContent = energyLocal + '%';
-}
-function setEnergy(v) {
-  energyLocal = Math.max(0, Math.min(100, v));
-  setState({ energy: energyLocal });
-}
-function adjustEnergy(delta) {
-  setEnergy((state.energy || 0) + delta);
-}
-
-function setGameName() {
-  const name = document.getElementById('gameName').value.trim();
-  if (name) setState({ gameName: name });
-}
+function setEnergy(v) { setState({ energy: Math.max(0, Math.min(100, v)) }); }
+function adjustEnergy(d) { setEnergy((state.energy || 0) + d); }
+function setGameName() { const n = document.getElementById('gameName').value.trim(); if (n) setState({ gameName: n }); }
 
 function toggleCountdown() {
-  if (state.countdownOn) {
-    setState({ countdownOn: false });
-  } else {
-    const sec = (parseInt(document.getElementById('cdMin').value) || 30) * 60;
-    const label = document.getElementById('cdLabel').value || '倒計時';
-    setState({ countdownOn: true, countdownSec: sec, countdownLabel: label });
-  }
+  if (state.countdownOn) { setState({ countdownOn: false }); return; }
+  const sec = (parseInt(document.getElementById('cdMin').value) || 30) * 60;
+  const label = document.getElementById('cdLabel').value || '倒計時';
+  setState({ countdownOn: true, countdownSec: sec, countdownLabel: label });
 }
 
 function toggleApi() {
   const fbPage = document.getElementById('fbPage').value;
   const fbVideoId = document.getElementById('fbVideoId').value.trim();
   const twChannel = document.getElementById('twChannel').value.trim();
-  if (!apiActive && !fbVideoId && !twChannel) {
-    toast('請先填入 FB Video ID 或 Twitch 頻道', true);
-    return;
-  }
+  if (!apiActive && !fbVideoId && !twChannel) { toast('請填入 FB Video ID 或 Twitch 頻道', true); return; }
   setState({ apiActive: !apiActive, fbPage, fbVideoId, twChannel });
 }
 
-function toggle(key, btnId, label) {
-  const next = !(state[key] !== false);
-  setState({ [key]: next });
-}
-
 function sendAlert() {
-  const type = document.getElementById('aType').value;
   const user = document.getElementById('aUser').value.trim() || 'Player';
   const amount = document.getElementById('aAmt').value.trim();
   const msgs = { follow: '追蹤了!', sub: '訂閱了!', tip: '打賞了!', share: '分享了直播!' };
-  fireCommand({ type: 'alert', alertType: type, user, msg: msgs[type], amount });
+  fireCommand({ type: 'alert', alertType: selectedAlert, user, msg: msgs[selectedAlert], amount });
   document.getElementById('aUser').value = '';
   document.getElementById('aAmt').value = '';
 }
 
-// ─── Toast ───────────────────────────────────────────────
-let toastTimer;
-function toast(msg, err = false) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show' + (err ? ' err' : '');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.className = '', 2000);
-}
-
-// ─── FB 粉專管理 ─────────────────────────────────────────
-let pages = [];
-
+// ── Pages ─────────────────────────────────────────────────
 async function fetchPages() {
   try {
-    const r = await fetch(WORKER() + '/api/pages');
-    const d = await r.json();
+    const d = await (await fetch(WORKER() + '/api/pages')).json();
     pages = d.pages || [];
     renderPages();
   } catch {}
@@ -369,22 +361,12 @@ async function fetchPages() {
 
 function renderPages() {
   const el = document.getElementById('pageList');
-  if (!pages.length) { el.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.25)">尚未設定任何粉專</div>'; }
-  else {
-    el.innerHTML = pages.map(p =>
-      `<div style="display:flex;align-items:center;gap:10px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.1);border-radius:8px;padding:8px 12px">
-        <span style="font-family:monospace;color:var(--g);font-size:13px">${p.id}</span>
-        <span style="font-size:14px;flex:1">${p.name}</span>
-        <span style="font-size:11px;color:rgba(0,212,170,0.7)">Token 已存</span>
-        <button class="sm" onclick="deletePage('${p.id}')">刪除</button>
-      </div>`
-    ).join('');
-  }
-  // 更新 API 串接下拉
+  el.innerHTML = pages.length
+    ? pages.map(p => `<div class="page-item"><span class="page-id">${p.id}</span><span class="page-name">${p.name}</span><span class="page-ok">✓ Token</span><button class="btn sm danger" style="width:auto;padding:6px 12px" onclick="deletePage('${p.id}')">刪</button></div>`).join('')
+    : '<div style="font-size:13px;color:rgba(255,255,255,0.2);padding:8px 0">尚未設定粉專</div>';
   const sel = document.getElementById('fbPage');
   const cur = sel.value;
-  sel.innerHTML = '<option value="">── 選粉專 ──</option>' +
-    pages.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  sel.innerHTML = '<option value="">── 選粉專 ──</option>' + pages.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   if (cur) sel.value = cur;
 }
 
@@ -392,19 +374,12 @@ async function addPage() {
   const id = document.getElementById('pId').value.trim();
   const name = document.getElementById('pName').value.trim();
   const token = document.getElementById('pToken').value.trim();
-  if (!id || !name || !token) { toast('請填入 ID、名稱、Token', true); return; }
-  // 合併現有
-  const existing = pages.filter(p => p.id !== id);
-  const newPages = [...existing, { id, name, token }].sort((a,b) => a.id.localeCompare(b.id));
+  if (!id || !name || !token) { toast('請填完所有欄位', true); return; }
+  const newPages = [...pages.filter(p => p.id !== id), { id, name, token }].sort((a,b) => a.id.localeCompare(b.id));
   try {
     const r = await api('/api/admin/pages', 'POST', { pages: newPages });
-    if (r.ok) {
-      toast('已儲存：' + name);
-      document.getElementById('pId').value = '';
-      document.getElementById('pName').value = '';
-      document.getElementById('pToken').value = '';
-      fetchPages();
-    } else { toast(r.error || '失敗', true); }
+    if (r.ok) { toast('已儲存'); ['pId','pName','pToken'].forEach(i => document.getElementById(i).value=''); fetchPages(); }
+    else toast(r.error || '失敗', true);
   } catch { toast('連線失敗', true); }
 }
 
@@ -413,19 +388,20 @@ async function deletePage(id) {
   try {
     const r = await api('/api/admin/pages', 'POST', { pages: newPages });
     if (r.ok) { toast('已刪除'); fetchPages(); }
-    else { toast('失敗', true); }
-  } catch { toast('連線失敗', true); }
+  } catch { toast('失敗', true); }
 }
 
-// ─── Init ────────────────────────────────────────────────
-function init() {
-  document.getElementById('setup').classList.add('hide');
-  fetchState();
-  fetchPages();
-  setInterval(fetchState, 5000);
+// ── Toast ─────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'show' + (err ? ' err' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.className = '', 2000);
 }
 
-window.addEventListener('load', init);
+// ── Init ──────────────────────────────────────────────────
+fetchState(); fetchPages();
+setInterval(fetchState, 5000);
 </script>
 </body>
 </html>
