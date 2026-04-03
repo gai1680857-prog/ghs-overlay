@@ -164,12 +164,17 @@ button.sm{padding:6px 12px;font-size:12px}
     </div>
   </div>
 
-  <!-- 設定 -->
-  <div class="card">
-    <div class="card-title">連線設定</div>
-    <div class="row"><label>Worker</label><input id="cfgUrl" readonly style="font-size:11px;color:rgba(255,255,255,0.4)"></div>
-    <div class="row"><label>Admin Key</label><input id="cfgKey" type="password" readonly style="font-size:11px;color:rgba(255,255,255,0.4)"></div>
-    <button class="full sm" style="margin-top:8px" onclick="resetSetup()">重新設定</button>
+  <!-- FB 粉專管理 -->
+  <div class="card" style="grid-column:1/-1">
+    <div class="card-title">FB 粉專 Token 設定</div>
+    <div id="pageList" style="margin-bottom:10px;display:flex;flex-direction:column;gap:6px"></div>
+    <div style="display:grid;grid-template-columns:80px 160px 1fr auto;gap:8px;align-items:center">
+      <input id="pId" placeholder="p1~p5" style="text-align:center">
+      <input id="pName" placeholder="粉專名稱（如蓋厚勝主號）">
+      <input id="pToken" placeholder="Page Access Token（EAA...）" type="password">
+      <button onclick="addPage()" style="white-space:nowrap">新增 / 更新</button>
+    </div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.2);margin-top:8px">Token 存在 Worker KV，不會外露。需要長期 Token 請用 Graph API Explorer 換。</div>
   </div>
 
 </div>
@@ -177,8 +182,8 @@ button.sm{padding:6px 12px;font-size:12px}
 <div id="toast"></div>
 
 <script>
-const WORKER = () => localStorage.getItem('ghs_worker') || '';
-const AKEY = () => localStorage.getItem('ghs_key') || '';
+const WORKER = () => 'https://ghs-stream-api.gai1680857.workers.dev';
+const AKEY = () => 'ghs168888';
 
 let state = {};
 let apiActive = false;
@@ -347,18 +352,65 @@ function toast(msg, err = false) {
   toastTimer = setTimeout(() => el.className = '', 2000);
 }
 
+// ─── FB 粉專管理 ─────────────────────────────────────────
+let pages = [];
+
+async function fetchPages() {
+  try {
+    const r = await fetch(WORKER() + '/api/pages');
+    const d = await r.json();
+    pages = d.pages || [];
+    renderPages();
+  } catch {}
+}
+
+function renderPages() {
+  const el = document.getElementById('pageList');
+  if (!pages.length) { el.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.25)">尚未設定任何粉專</div>'; return; }
+  el.innerHTML = pages.map(p =>
+    `<div style="display:flex;align-items:center;gap:10px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.1);border-radius:8px;padding:8px 12px">
+      <span style="font-family:monospace;color:var(--g);font-size:13px">${p.id}</span>
+      <span style="font-size:14px;flex:1">${p.name}</span>
+      <span style="font-size:11px;color:rgba(0,212,170,0.7)">Token 已存</span>
+      <button class="sm" onclick="deletePage('${p.id}')">刪除</button>
+    </div>`
+  ).join('');
+}
+
+async function addPage() {
+  const id = document.getElementById('pId').value.trim();
+  const name = document.getElementById('pName').value.trim();
+  const token = document.getElementById('pToken').value.trim();
+  if (!id || !name || !token) { toast('請填入 ID、名稱、Token', true); return; }
+  // 合併現有
+  const existing = pages.filter(p => p.id !== id);
+  const newPages = [...existing, { id, name, token }].sort((a,b) => a.id.localeCompare(b.id));
+  try {
+    const r = await api('/api/admin/pages', 'POST', { pages: newPages });
+    if (r.ok) {
+      toast('已儲存：' + name);
+      document.getElementById('pId').value = '';
+      document.getElementById('pName').value = '';
+      document.getElementById('pToken').value = '';
+      fetchPages();
+    } else { toast(r.error || '失敗', true); }
+  } catch { toast('連線失敗', true); }
+}
+
+async function deletePage(id) {
+  const newPages = pages.filter(p => p.id !== id);
+  try {
+    const r = await api('/api/admin/pages', 'POST', { pages: newPages });
+    if (r.ok) { toast('已刪除'); fetchPages(); }
+    else { toast('失敗', true); }
+  } catch { toast('連線失敗', true); }
+}
+
 // ─── Init ────────────────────────────────────────────────
 function init() {
-  const url = WORKER();
-  const key = AKEY();
-  if (!url || !key) {
-    document.getElementById('setup').classList.remove('hide');
-    return;
-  }
   document.getElementById('setup').classList.add('hide');
-  document.getElementById('cfgUrl').value = url;
-  document.getElementById('cfgKey').value = key;
   fetchState();
+  fetchPages();
   setInterval(fetchState, 5000);
 }
 
