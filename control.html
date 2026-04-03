@@ -91,6 +91,7 @@ button.sm{padding:6px 12px;font-size:12px}
   <!-- API 串接 -->
   <div class="card">
     <div class="card-title">Live API 串接</div>
+    <div class="row"><label>FB 粉專</label><select id="fbPage"><option value="">── 選粉專 ──</option></select></div>
     <div class="row"><label>FB Video ID</label><input id="fbVideoId" placeholder="開播後貼入 Video ID"></div>
     <div class="row"><label>Twitch</label><input id="twChannel" placeholder="頻道名稱（小寫）"></div>
     <div class="btn-row" style="margin-top:4px">
@@ -274,6 +275,7 @@ function updateUI() {
     apiBtn.textContent = '啟動 API';
     apiBtn.className = 'full';
   }
+  if (state.fbPage) document.getElementById('fbPage').value = state.fbPage;
   if (state.fbVideoId) document.getElementById('fbVideoId').value = state.fbVideoId;
   if (state.twChannel) document.getElementById('twChannel').value = state.twChannel;
 
@@ -318,13 +320,14 @@ function toggleCountdown() {
 }
 
 function toggleApi() {
+  const fbPage = document.getElementById('fbPage').value;
   const fbVideoId = document.getElementById('fbVideoId').value.trim();
   const twChannel = document.getElementById('twChannel').value.trim();
   if (!apiActive && !fbVideoId && !twChannel) {
     toast('請先填入 FB Video ID 或 Twitch 頻道', true);
     return;
   }
-  setState({ apiActive: !apiActive, fbVideoId, twChannel });
+  setState({ apiActive: !apiActive, fbPage, fbVideoId, twChannel });
 }
 
 function toggle(key, btnId, label) {
@@ -366,15 +369,23 @@ async function fetchPages() {
 
 function renderPages() {
   const el = document.getElementById('pageList');
-  if (!pages.length) { el.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.25)">尚未設定任何粉專</div>'; return; }
-  el.innerHTML = pages.map(p =>
-    `<div style="display:flex;align-items:center;gap:10px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.1);border-radius:8px;padding:8px 12px">
-      <span style="font-family:monospace;color:var(--g);font-size:13px">${p.id}</span>
-      <span style="font-size:14px;flex:1">${p.name}</span>
-      <span style="font-size:11px;color:rgba(0,212,170,0.7)">Token 已存</span>
-      <button class="sm" onclick="deletePage('${p.id}')">刪除</button>
-    </div>`
-  ).join('');
+  if (!pages.length) { el.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.25)">尚未設定任何粉專</div>'; }
+  else {
+    el.innerHTML = pages.map(p =>
+      `<div style="display:flex;align-items:center;gap:10px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.1);border-radius:8px;padding:8px 12px">
+        <span style="font-family:monospace;color:var(--g);font-size:13px">${p.id}</span>
+        <span style="font-size:14px;flex:1">${p.name}</span>
+        <span style="font-size:11px;color:rgba(0,212,170,0.7)">Token 已存</span>
+        <button class="sm" onclick="deletePage('${p.id}')">刪除</button>
+      </div>`
+    ).join('');
+  }
+  // 更新 API 串接下拉
+  const sel = document.getElementById('fbPage');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">── 選粉專 ──</option>' +
+    pages.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  if (cur) sel.value = cur;
 }
 
 async function addPage() {

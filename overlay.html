@@ -398,13 +398,14 @@ autoScale(); window.addEventListener('resize', autoScale);
 let apiActive = false, apiInterval = null;
 const shownMsgIds = new Set();
 
-function startApi(fbVideoId, twChannel) {
+function startApi(fbVideoId, twChannel, fbPage) {
   apiActive = true;
   stopDemo();
   function poll() {
     const params = new URLSearchParams();
     if (fbVideoId) params.set('fb_video_id', fbVideoId);
     if (twChannel) params.set('twitch_channel', twChannel);
+    if (fbPage) params.set('fb_page', fbPage);
     const qs = params.toString();
     fetch(WORKER + '/api/chat?' + qs).then(r => r.json()).then(d => {
       if (d.all && d.all.length > 0) renderLiveChat(d.all);
@@ -478,7 +479,7 @@ async function syncState() {
 
     // API active
     if (s.apiActive && !lastState.apiActive)
-      startApi(s.fbVideoId || '', s.twChannel || '');
+      startApi(s.fbVideoId || '', s.twChannel || '', s.fbPage || '');
     else if (!s.apiActive && lastState.apiActive)
       stopApi();
 
